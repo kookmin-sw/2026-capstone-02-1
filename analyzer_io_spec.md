@@ -86,4 +86,6 @@ flowchart TD
 
 ## Analysis progress output
 
+Updates to node text/code.
+
 ## Analysis result output
