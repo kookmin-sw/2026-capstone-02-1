@@ -12,7 +12,7 @@ JSON 형식으로 출력
 ## Control Flow Graph output
 
 ```
-./analyzer input.go --print-cfg
+./analyzer --gofile input.go --print-cfg
 ```
 
 `node_type` :
