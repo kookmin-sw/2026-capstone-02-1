@@ -76,9 +76,23 @@ func (graphcreator *CFGGraphCreator) create_cfg_method(n ast.Node) int {
 			}
 		}
 		if node.Else != nil {
-			graphcreator.prev_node_index = if_node_id
-			else_node_id := graphcreator.create_cfg_node(node.Else, node_basic)
-			graphcreator.create_cfg_edge(else_node_id, "false")
+			switch else_node := node.Else.(type) {
+			case *ast.BlockStmt:
+				// else body
+				for index, body_node := range else_node.List {
+					if index == 0 {
+						body_node_id := graphcreator.create_cfg_node(body_node, node_basic)
+						graphcreator.create_cfg_edge(body_node_id, "true")
+						graphcreator.prev_node_index = body_node_id
+					} else {
+						graphcreator.prev_node_index = graphcreator.create_cfg_method(body_node)
+					}
+				}
+			default:
+				graphcreator.prev_node_index = if_node_id
+				else_node_id := graphcreator.create_cfg_node(node.Else, node_basic)
+				graphcreator.create_cfg_edge(else_node_id, "false")
+			}
 		}
 		return graphcreator.prev_node_index
 	default:
