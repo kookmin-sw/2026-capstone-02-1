@@ -113,9 +113,10 @@ func Print_cfg(file *ast.File, fset *token.FileSet) {
 				func_cfg_map[decl_node.Name.Name] = &CFGGraph{}
 				cfg_creator := CFGGraphCreator{fset: fset, cfg_graph: func_cfg_map[decl_node.Name.Name], next_node_index: 1}
 				cfg_creator.create_cfg_method(decl_node.Body)
-				result, _ := json.Marshal(func_cfg_map)
-				fmt.Println(string(result))
 			}
 		}
 	}
+	// result, _ := json.Marshal(func_cfg_map)
+	result, _ := json.MarshalIndent(func_cfg_map, "", "    ") // return formatted
+	fmt.Println(string(result))
 }
