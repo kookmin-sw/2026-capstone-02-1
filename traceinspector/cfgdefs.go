@@ -41,7 +41,7 @@ func (node *CFGNode) to_json() []byte {
 func (node *CFGEdge) to_json() []byte {
 	out, err := json.Marshal(node)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to marshal CFG Edge %s\n", node))
+		panic(fmt.Sprintf("Failed to marshal CFG Edge %s\n", node.Label))
 	}
 	return out
 }
@@ -54,7 +54,7 @@ type CFGGraph struct {
 func (cfg_graph *CFGGraph) to_json() []byte {
 	out, err := json.Marshal(cfg_graph)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to marshal CFG %s\n", cfg_graph))
+		panic("Failed to marshal CFG graph")
 	}
 	return out
 }
