@@ -16,6 +16,11 @@ type ImpInterpreter struct {
 	Functions map[string]ImpFunction
 }
 
+// Interpret Imp code starting from main()
+func (interpreter *ImpInterpreter) Interpret_main() {
+	interpreter.eval_function_call("main", nil)
+}
+
 func (interpreter *ImpInterpreter) get_top_state() *ImpState {
 	return interpreter.States[len(interpreter.States)-1]
 }
@@ -38,6 +43,8 @@ func (interpreter *ImpInterpreter) push_state(state ImpState) {
 func (interpreter *ImpInterpreter) pop_state() {
 	interpreter.States = interpreter.States[:len(interpreter.States)-1]
 }
+
+////////////////////////
 
 func (interpreter *ImpInterpreter) eval_VarExpr(node VarExpr) ImpValues {
 	var_value, var_exists := interpreter.get_variable(node.name)
@@ -74,6 +81,10 @@ func (interpreter *ImpInterpreter) eval_IntLitExpr(node IntLitExpr) ImpValues {
 
 func (interpreter *ImpInterpreter) eval_BoolLitExpr(node BoolLitExpr) ImpValues {
 	return &BoolVal{val: node.value}
+}
+
+func (interpreter *ImpInterpreter) eval_StringLitExpr(node StringLitExpr) ImpValues {
+	return &StringVal{val: node.value}
 }
 
 func (interpreter *ImpInterpreter) eval_ArrayLitExpr(node ArrayLitExpr) ImpValues {
@@ -226,7 +237,7 @@ func (interpreter *ImpInterpreter) eval_function_call(func_name string, args []E
 		}
 		panic(fmt.Sprintf("Function call: Unknown arg type %s", arg))
 	}
-	func_local_state := ImpState{vars: make(map[string]ImpValues)}
+	func_local_state := ImpState{vars: make(map[string]ImpValues), current_function_name: func_name, return_value: &NoneVal{}}
 	for index, arg_expr := range args {
 		arg_info := interpreter.Functions[func_name].Arg_names[index]
 		arg_val := prepare_args(interpreter.eval_Expr(arg_expr))
@@ -240,11 +251,7 @@ func (interpreter *ImpInterpreter) eval_function_call(func_name string, args []E
 	return_value := interpreter.get_top_state().return_value
 	interpreter.pop_state()
 
-	if return_value == nil {
-		return &NoneVal{}
-	} else {
-		return return_value
-	}
+	return return_value
 }
 
 func (interpreter *ImpInterpreter) eval_CallExpr(node CallExpr) ImpValues {
@@ -282,6 +289,8 @@ func (interpreter *ImpInterpreter) eval_Expr(node Expr) ImpValues {
 		return interpreter.eval_IntLitExpr(*node_ty)
 	case *BoolLitExpr:
 		return interpreter.eval_BoolLitExpr(*node_ty)
+	case *StringLitExpr:
+		return interpreter.eval_StringLitExpr(*node_ty)
 	case *ArrayLitExpr:
 		return interpreter.eval_ArrayLitExpr(*node_ty)
 	case *AddExpr:

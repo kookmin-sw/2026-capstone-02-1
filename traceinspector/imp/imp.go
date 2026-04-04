@@ -157,9 +157,9 @@ type Stmt interface {
 // expressions
 
 type VarExpr struct {
+	Node
 	name     string
 	var_type ImpTypes
-	Node
 }
 
 func (*VarExpr) isExpr() {}
@@ -169,8 +169,8 @@ func (expr VarExpr) String() string {
 }
 
 type IntLitExpr struct {
-	value int
 	Node
+	value int
 }
 
 func (*IntLitExpr) isExpr() {}
@@ -180,6 +180,7 @@ func (expr IntLitExpr) String() string {
 }
 
 type BoolLitExpr struct {
+	Node
 	value bool
 }
 
@@ -189,7 +190,19 @@ func (expr BoolLitExpr) String() string {
 	return fmt.Sprintf("%t", expr.value)
 }
 
+type StringLitExpr struct {
+	Node
+	value string
+}
+
+func (*StringLitExpr) isExpr() {}
+
+func (expr StringLitExpr) String() string {
+	return expr.value
+}
+
 type ArrayLitExpr struct {
+	Node
 	element_type ImpTypes
 	elements     []Expr
 }
@@ -205,6 +218,7 @@ func (expr ArrayLitExpr) String() string {
 }
 
 type AddExpr struct {
+	Node
 	lhs, rhs Expr
 }
 
@@ -215,6 +229,7 @@ func (expr AddExpr) String() string {
 }
 
 type SubExpr struct {
+	Node
 	lhs, rhs Expr
 }
 
@@ -225,6 +240,7 @@ func (expr SubExpr) String() string {
 }
 
 type MulExpr struct {
+	Node
 	lhs, rhs Expr
 }
 
@@ -235,6 +251,7 @@ func (expr MulExpr) String() string {
 }
 
 type DivExpr struct {
+	Node
 	lhs, rhs Expr
 }
 
@@ -245,6 +262,7 @@ func (expr DivExpr) String() string {
 }
 
 type ParenExpr struct {
+	Node
 	subexpr Expr
 }
 
@@ -255,6 +273,7 @@ func (expr ParenExpr) String() string {
 }
 
 type ArrayIndexExpr struct {
+	Node
 	base  Expr
 	index Expr
 }
@@ -266,6 +285,7 @@ func (expr ArrayIndexExpr) String() string {
 }
 
 type EqExpr struct {
+	Node
 	lhs, rhs Expr
 }
 
@@ -276,6 +296,7 @@ func (expr EqExpr) String() string {
 }
 
 type NeqExpr struct {
+	Node
 	lhs, rhs Expr
 }
 
@@ -286,6 +307,7 @@ func (expr NeqExpr) String() string {
 }
 
 type NotExpr struct {
+	Node
 	subexpr Expr
 }
 
@@ -296,6 +318,7 @@ func (expr NotExpr) String() string {
 }
 
 type AndExpr struct {
+	Node
 	lhs, rhs Expr
 }
 
@@ -306,6 +329,7 @@ func (expr AndExpr) String() string {
 }
 
 type OrExpr struct {
+	Node
 	lhs, rhs Expr
 }
 
@@ -316,6 +340,7 @@ func (expr OrExpr) String() string {
 }
 
 type CallExpr struct {
+	Node
 	func_name string
 	args      []Expr
 }
@@ -331,6 +356,7 @@ func (expr CallExpr) String() string {
 }
 
 type MakeArrayExpr struct {
+	Node
 	size  Expr
 	value Expr
 }
@@ -342,6 +368,7 @@ func (expr MakeArrayExpr) String() string {
 }
 
 type LenExpr struct {
+	Node
 	subexpr Expr
 }
 
@@ -359,6 +386,7 @@ type SkipStmt struct {
 func (*SkipStmt) isStmt() {}
 
 type AssignStmt struct {
+	Node
 	lhs Expr
 	rhs Expr
 }
@@ -370,6 +398,7 @@ func (stmt AssignStmt) String() string {
 }
 
 type IfElseStmt struct {
+	Node
 	cond       Expr
 	true_stmt  []Stmt
 	false_stmt []Stmt
@@ -390,6 +419,7 @@ func (stmt IfElseStmt) String() string {
 }
 
 type WhileStmt struct {
+	Node
 	cond      Expr
 	body_stmt []Stmt
 }
@@ -405,6 +435,7 @@ func (stmt WhileStmt) String() string {
 }
 
 type CallStmt struct {
+	Node
 	func_name string
 	args      []Expr
 }
@@ -420,6 +451,7 @@ func (stmt CallStmt) String() string {
 }
 
 type PrintStmt struct {
+	Node
 	args []Expr
 }
 
@@ -434,6 +466,7 @@ func (stmt PrintStmt) String() string {
 }
 
 type ScanfStmt struct {
+	Node
 	format_string    string
 	assign_locations []Expr
 }
@@ -449,6 +482,7 @@ func (stmt ScanfStmt) String() string {
 }
 
 type ReturnStmt struct {
+	Node
 	arg Expr
 }
 
