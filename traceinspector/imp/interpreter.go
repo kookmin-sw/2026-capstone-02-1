@@ -76,6 +76,22 @@ func (interpreter *ImpInterpreter) eval_BoolLitExpr(node BoolLitExpr) ImpValues 
 	return &BoolVal{val: node.value}
 }
 
+func (interpreter *ImpInterpreter) eval_ArrayLitExpr(node ArrayLitExpr) ImpValues {
+	var elem_vals []ImpValues
+	var elem_type ImpTypes
+	for _, elem := range node.elements {
+		elem_val := interpreter.eval_Expr(elem)
+		if elem_type == nil {
+			elem_type = get_type(elem_val)
+		}
+		if !check_val_type_match(elem_val, elem_type) {
+			panic(fmt.Sprintf("eval_ArrayLitExpr: Array element type is identified as %s, but got expr '%s' with value %s\n", elem_type, elem, elem_val))
+		}
+		elem_vals = append(elem_vals, elem_val)
+	}
+	return &ArrayVal{element_type: elem_type, val: elem_vals}
+}
+
 func (interpreter *ImpInterpreter) eval_AddExpr(node AddExpr) ImpValues {
 	lhs_val, lhs_is_int := interpreter.eval_Expr(node.lhs).(*IntVal)
 	rhs_val, rhs_is_int := interpreter.eval_Expr(node.rhs).(*IntVal)
@@ -266,6 +282,8 @@ func (interpreter *ImpInterpreter) eval_Expr(node Expr) ImpValues {
 		return interpreter.eval_IntLitExpr(*node_ty)
 	case *BoolLitExpr:
 		return interpreter.eval_BoolLitExpr(*node_ty)
+	case *ArrayLitExpr:
+		return interpreter.eval_ArrayLitExpr(*node_ty)
 	case *AddExpr:
 		return interpreter.eval_AddExpr(*node_ty)
 	case *SubExpr:

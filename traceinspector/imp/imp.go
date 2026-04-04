@@ -189,6 +189,21 @@ func (expr BoolLitExpr) String() string {
 	return fmt.Sprintf("%t", expr.value)
 }
 
+type ArrayLitExpr struct {
+	element_type ImpTypes
+	elements     []Expr
+}
+
+func (*ArrayLitExpr) isExpr() {}
+
+func (expr ArrayLitExpr) String() string {
+	var elems []string
+	for _, elem := range expr.elements {
+		elems = append(elems, fmt.Sprintf("%s", elem))
+	}
+	return fmt.Sprintf("{%s}", strings.Join(elems, ", "))
+}
+
 type AddExpr struct {
 	lhs, rhs Expr
 }
