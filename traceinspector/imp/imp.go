@@ -15,6 +15,7 @@ type ImpTypes interface {
 type IntType ImpTypes
 
 type BoolType ImpTypes
+type StringType ImpTypes
 type NonType ImpTypes
 
 type ImpArray struct {
@@ -40,6 +41,9 @@ func check_val_type_match(val ImpValues, _type ImpTypes) bool {
 	case *ArrayVal:
 		array_ty, type_is_array := _type.(ImpArray)
 		return type_is_array && array_ty.Element_type == val_ty.element_type
+	case *StringVal:
+		_, type_is_string := _type.(StringType)
+		return type_is_string
 	}
 	return false
 }
@@ -350,7 +354,7 @@ func (*CallStmt) isStmt() {}
 func (stmt CallStmt) String() string {
 	var args []string
 	for _, arg := range stmt.args {
-		args = append(args, fmt.Sprintf("    %s", arg))
+		args = append(args, fmt.Sprintf("%s", arg))
 	}
 	return fmt.Sprintf("%s(%s)\n", stmt.func_name, strings.Join(args, ", "))
 }
@@ -364,9 +368,24 @@ func (*PrintStmt) isStmt() {}
 func (stmt PrintStmt) String() string {
 	var args []string
 	for _, arg := range stmt.args {
-		args = append(args, fmt.Sprintf("    %s", arg))
+		args = append(args, fmt.Sprintf("%s", arg))
 	}
 	return fmt.Sprintf("print(%s)\n", strings.Join(args, ", "))
+}
+
+type ScanfStmt struct {
+	format_string    string
+	assign_locations []Expr
+}
+
+func (*ScanfStmt) isStmt() {}
+
+func (stmt ScanfStmt) String() string {
+	var args []string
+	for _, arg := range stmt.assign_locations {
+		args = append(args, fmt.Sprintf("%s", arg))
+	}
+	return fmt.Sprintf("scanf(%s, %s)\n", stmt.format_string, strings.Join(args, ", "))
 }
 
 type ReturnStmt struct {

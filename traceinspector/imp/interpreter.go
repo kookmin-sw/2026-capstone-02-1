@@ -338,6 +338,40 @@ func (interpreter *ImpInterpreter) eval_PrintStmt(node PrintStmt) {
 	fmt.Print(strings.Join(outputs, " "))
 }
 
+func (interpreter *ImpInterpreter) eval_ScanfStmt(node ScanfStmt) {
+	for index, fmt_str := range strings.Split(node.format_string, " ") {
+		var imp_val ImpValues
+		switch fmt_str {
+		case "%d":
+			var input int
+			fmt.Scanf(fmt_str, &input)
+			imp_val = &IntVal{val: input}
+		case "%t":
+			var input bool
+			fmt.Scanf(fmt_str, &input)
+			imp_val = &BoolVal{val: input}
+		default:
+			panic(fmt.Sprintf("scanf: Unsupported formatting specifier %s\n", fmt_str))
+		}
+
+		lhs_val := node.assign_locations[index]
+		switch lhs_loc := interpreter.eval_Expr_lvalue(lhs_val, imp_val).(type) {
+		case *IntVal:
+			rhs_intval, rhs_is_intval := imp_val.(*IntVal)
+			if !rhs_is_intval {
+				panic(fmt.Sprintf("scanf: Attempted to assign input '%s' of type %T to variable '%s' of type %T\n", imp_val, imp_val, lhs_loc, lhs_loc))
+			}
+			lhs_loc.val = rhs_intval.val
+		case *BoolVal:
+			rhs_intval, rhs_is_boolval := imp_val.(*BoolVal)
+			if !rhs_is_boolval {
+				panic(fmt.Sprintf("scanf: Attempted to assign input '%s' of type %T to variable '%s' of type %T\n", imp_val, imp_val, lhs_loc, lhs_loc))
+			}
+			lhs_loc.val = rhs_intval.val
+		}
+	}
+}
+
 func (interpreter *ImpInterpreter) eval_ReturnStmt(node ReturnStmt) {
 	top_state := interpreter.get_top_state()
 	top_state.return_value = interpreter.eval_Expr(node.arg)
@@ -364,6 +398,8 @@ func (interpreter *ImpInterpreter) eval_Stmt(nodes []Stmt) {
 			interpreter.eval_CallStmt(*stmt)
 		case *PrintStmt:
 			interpreter.eval_PrintStmt(*stmt)
+		case *ScanfStmt:
+			interpreter.eval_ScanfStmt(*stmt)
 		case *ReturnStmt:
 			interpreter.eval_ReturnStmt(*stmt)
 		}
