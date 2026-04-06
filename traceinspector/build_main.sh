@@ -1,2 +1,2 @@
 #! /bin/bash
-go build cmd/traceinspector/main.go
+go build -o traceinspector cmd/traceinspector/main.go

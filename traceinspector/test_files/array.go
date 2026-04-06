@@ -4,8 +4,10 @@ package main
 
 import "fmt"
 
-func add1(a int) int {
-	return a + 1
+func triple_array() {
+	a := make_array(5, []int{1, 2, 3})
+	a[0][1] = 999
+	fmt.Print(a, "\n")
 }
 
 func resize_array(arr []int, len int, defval int) []int {
@@ -29,4 +31,5 @@ func main() {
 	fmt.Scanf("%d", v)
 	a = resize_array(a, x, v)
 	fmt.Print("resized a:", a, "\n")
+	triple_array()
 }

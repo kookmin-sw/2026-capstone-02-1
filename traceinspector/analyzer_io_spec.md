@@ -5,9 +5,13 @@
 JSON 형식으로 출력
 
 출력 종류:
-1. CFG 출력: `./analyzer --gofile input.go --print-cfg` 로 호출. 코드에 대응되는 그래프의 정점과 간선 정보 출력. 정점에 대응되는 코드 줄 번호를 입력하여 정점을 클릭하거나 코드 줄을 클릭하면 서로 하이라이트 되게끔 구현.
+1. CFG 출력: `./traceinspector --gofile input.go --print-cfg` 로 호출. 코드에 대응되는 그래프의 정점과 간선 정보 출력. 정점에 대응되는 코드 줄 번호를 입력하여 정점을 클릭하거나 코드 줄을 클릭하면 서로 하이라이트 되게끔 구현.
+2. Go -> Imp 번역: `./traceinspector --gofile input.go --print-imp` 로 호출. 입력 Go 코드에 대응되는 Imp 코드 출력.
+3. Go -> Imp 번역 후 실행: `./traceinspector --gofile input.go --interpret-imp` 로 호출. 입력 Go 코드에 대응되는 Imp 코드 생성 후 실행(interpretation).
 2. 분석 중간단계 업데이트: 분석이 진행되는 동안 그래프/도메인상의 정보가 단계별로 업데이트 되는 정보 생성. 그래프의 정점들의 label 정보 업데이트 요청.
 3. 최종 분석 결과: 분석이 완료된 후, 탐지된 오류의 발생 위치(노드 번호)와 유형, 정보 반환
+
+
 
 ## Control Flow Graph output
 
