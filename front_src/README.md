@@ -1,14 +1,13 @@
-1. Install nodejs
+1. Install NodeJS
 2. Type Following Command
 
-```
-cd ./inspector
-rm -rf node_modules package-lock.json
-npm install vite vite-node
+```sh
+$ rm -rf node_modules package-lock.json
+$ npm install
 ```
 
 3. Run VITE Environment
 
-```
-npm run dev
+```sh
+$ npm run dev
 ```

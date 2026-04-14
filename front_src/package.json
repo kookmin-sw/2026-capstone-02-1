@@ -19,7 +19,10 @@
     "@codemirror/search": "^6.6.0",
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.41.0",
+    "@fsegurai/codemirror-theme-nord": "^6.2.5",
+    "@types/express": "^5.0.6",
     "codemirror": "^6.0.2",
+    "express": "^5.2.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
