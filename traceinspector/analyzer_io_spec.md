@@ -55,192 +55,558 @@ generates a CFG graph for every function defined in the file.
     "main": {
         "Nodes": [
             {
-                "Id": 1,
-                "Code": "print(#34;Done#34;, x)",
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 1
+                },
+                "Code": "print(quicksort(arr, 0, n - 1), #34;\\n#34;)",
                 "Node_type": "basic",
-                "Line_num": 24
+                "Line_num": 53
             },
             {
-                "Id": 2,
-                "Code": "i > 0",
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 2
+                },
+                "Code": "i < n",
                 "Node_type": "cond",
-                "Line_num": 11
+                "Line_num": 48
             },
             {
-                "Id": 3,
-                "Code": "i--\n",
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 3
+                },
+                "Code": "i++",
                 "Node_type": "basic",
-                "Line_num": 11
+                "Line_num": 48
             },
             {
-                "Id": 4,
-                "Code": "i % 2 == 0",
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 4
+                },
+                "Code": "arr[i] = x",
+                "Node_type": "basic",
+                "Line_num": 51
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 5
+                },
+                "Code": "Scanf(%d, x)",
+                "Node_type": "basic",
+                "Line_num": 50
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 6
+                },
+                "Code": "x = 0",
+                "Node_type": "basic",
+                "Line_num": 49
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 7
+                },
+                "Code": "i = 0",
+                "Node_type": "basic",
+                "Line_num": 48
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 8
+                },
+                "Code": "arr = make_array(n, 0)",
+                "Node_type": "basic",
+                "Line_num": 47
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 9
+                },
+                "Code": "Scanf(%d, n)",
+                "Node_type": "basic",
+                "Line_num": 46
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 10
+                },
+                "Code": "n = 0",
+                "Node_type": "basic",
+                "Line_num": 45
+            }
+        ],
+        "Edges": [
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 0
+                },
+                "From_node_id": 3,
+                "To_node_id": 2,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 1
+                },
+                "From_node_id": 4,
+                "To_node_id": 3,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 2
+                },
+                "From_node_id": 5,
+                "To_node_id": 4,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 3
+                },
+                "From_node_id": 6,
+                "To_node_id": 5,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 4
+                },
+                "From_node_id": 2,
+                "To_node_id": 6,
+                "Label": "True"
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 5
+                },
+                "From_node_id": 2,
+                "To_node_id": 1,
+                "Label": "False"
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 6
+                },
+                "From_node_id": 7,
+                "To_node_id": 2,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 7
+                },
+                "From_node_id": 8,
+                "To_node_id": 7,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 8
+                },
+                "From_node_id": 9,
+                "To_node_id": 8,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "main",
+                    "Id": 9
+                },
+                "From_node_id": 10,
+                "To_node_id": 9,
+                "Label": ""
+            }
+        ]
+    },
+    "partition": {
+        "Nodes": [
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 1
+                },
+                "Code": "return i",
+                "Node_type": "basic",
+                "Line_num": 29
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 2
+                },
+                "Code": "a[hi] = tmp",
+                "Node_type": "basic",
+                "Line_num": 27
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 3
+                },
+                "Code": "a[i] = a[hi]",
+                "Node_type": "basic",
+                "Line_num": 26
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 4
+                },
+                "Code": "tmp = a[i]",
+                "Node_type": "basic",
+                "Line_num": 25
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 5
+                },
+                "Code": "j < hi",
                 "Node_type": "cond",
                 "Line_num": 12
             },
             {
-                "Id": 5,
-                "Code": "i % 3 == 0",
-                "Node_type": "cond",
-                "Line_num": 13
-            },
-            {
-                "Id": 6,
-                "Code": "print(i, #34;is a multiple of 2 and 3\\n#34;)",
-                "Node_type": "basic",
-                "Line_num": 14
-            },
-            {
-                "Id": 7,
-                "Code": "print(i, #34;is a multiple of 2 and not a multiple of 3\\n#34;)",
-                "Node_type": "basic",
-                "Line_num": 16
-            },
-            {
-                "Id": 8,
-                "Code": "i % 3 == 0",
-                "Node_type": "cond",
-                "Line_num": 18
-            },
-            {
-                "Id": 9,
-                "Code": "print(i, #34;is not a multiple of 2, but a multiple of 3 \\n#34;)",
-                "Node_type": "basic",
-                "Line_num": 19
-            },
-            {
-                "Id": 10,
-                "Code": "print(i, #34;is not a multiple of both 2 and 3\\n#34;)",
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 6
+                },
+                "Code": "j = j + 1",
                 "Node_type": "basic",
                 "Line_num": 21
             },
             {
-                "Id": 11,
-                "Code": "i = x",
-                "Node_type": "basic",
-                "Line_num": 11
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 7
+                },
+                "Code": "a[j] < pivot",
+                "Node_type": "cond",
+                "Line_num": 13
             },
             {
-                "Id": 12,
-                "Code": "Scanf(%d, x)",
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 8
+                },
+                "Code": "i = i + 1",
+                "Node_type": "basic",
+                "Line_num": 19
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 9
+                },
+                "Code": "a[j] = tmp",
+                "Node_type": "basic",
+                "Line_num": 17
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 10
+                },
+                "Code": "a[i] = a[j]",
+                "Node_type": "basic",
+                "Line_num": 16
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 11
+                },
+                "Code": "tmp = a[i]",
+                "Node_type": "basic",
+                "Line_num": 15
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 12
+                },
+                "Code": "j = lo",
                 "Node_type": "basic",
                 "Line_num": 10
             },
             {
-                "Id": 13,
-                "Code": "print(#34;Enter non-negative integer:#34;)",
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 13
+                },
+                "Code": "i = lo",
                 "Node_type": "basic",
                 "Line_num": 9
             },
             {
-                "Id": 14,
-                "Code": "x = 0",
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 14
+                },
+                "Code": "pivot = a[hi]",
                 "Node_type": "basic",
                 "Line_num": 8
             }
         ],
         "Edges": [
             {
-                "Id": 0,
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 0
+                },
+                "From_node_id": 2,
+                "To_node_id": 1,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 1
+                },
                 "From_node_id": 3,
                 "To_node_id": 2,
                 "Label": ""
             },
             {
-                "Id": 1,
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 2
+                },
+                "From_node_id": 4,
+                "To_node_id": 3,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 3
+                },
                 "From_node_id": 6,
-                "To_node_id": 3,
+                "To_node_id": 5,
                 "Label": ""
             },
             {
-                "Id": 2,
-                "From_node_id": 7,
-                "To_node_id": 3,
-                "Label": ""
-            },
-            {
-                "Id": 3,
-                "From_node_id": 5,
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 4
+                },
+                "From_node_id": 8,
                 "To_node_id": 6,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 5
+                },
+                "From_node_id": 9,
+                "To_node_id": 8,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 6
+                },
+                "From_node_id": 10,
+                "To_node_id": 9,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 7
+                },
+                "From_node_id": 11,
+                "To_node_id": 10,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 8
+                },
+                "From_node_id": 7,
+                "To_node_id": 11,
                 "Label": "True"
             },
             {
-                "Id": 4,
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 9
+                },
+                "From_node_id": 7,
+                "To_node_id": 6,
+                "Label": "False"
+            },
+            {
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 10
+                },
                 "From_node_id": 5,
                 "To_node_id": 7,
-                "Label": "False"
-            },
-            {
-                "Id": 5,
-                "From_node_id": 9,
-                "To_node_id": 3,
-                "Label": ""
-            },
-            {
-                "Id": 6,
-                "From_node_id": 10,
-                "To_node_id": 3,
-                "Label": ""
-            },
-            {
-                "Id": 7,
-                "From_node_id": 8,
-                "To_node_id": 9,
                 "Label": "True"
             },
             {
-                "Id": 8,
-                "From_node_id": 8,
-                "To_node_id": 10,
-                "Label": "False"
-            },
-            {
-                "Id": 9,
-                "From_node_id": 4,
-                "To_node_id": 5,
-                "Label": "True"
-            },
-            {
-                "Id": 10,
-                "From_node_id": 4,
-                "To_node_id": 8,
-                "Label": "False"
-            },
-            {
-                "Id": 11,
-                "From_node_id": 2,
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 11
+                },
+                "From_node_id": 5,
                 "To_node_id": 4,
-                "Label": "True"
-            },
-            {
-                "Id": 12,
-                "From_node_id": 2,
-                "To_node_id": 1,
                 "Label": "False"
             },
             {
-                "Id": 13,
-                "From_node_id": 11,
-                "To_node_id": 2,
-                "Label": ""
-            },
-            {
-                "Id": 14,
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 12
+                },
                 "From_node_id": 12,
-                "To_node_id": 11,
+                "To_node_id": 5,
                 "Label": ""
             },
             {
-                "Id": 15,
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 13
+                },
                 "From_node_id": 13,
                 "To_node_id": 12,
                 "Label": ""
             },
             {
-                "Id": 16,
+                "Id": {
+                    "Function_name": "partition",
+                    "Id": 14
+                },
                 "From_node_id": 14,
                 "To_node_id": 13,
                 "Label": ""
+            }
+        ]
+    },
+    "quicksort": {
+        "Nodes": [
+            {
+                "Id": {
+                    "Function_name": "quicksort",
+                    "Id": 1
+                },
+                "Code": "return a",
+                "Node_type": "basic",
+                "Line_num": 41
+            },
+            {
+                "Id": {
+                    "Function_name": "quicksort",
+                    "Id": 2
+                },
+                "Code": "quicksort(a, p + 1, hi)",
+                "Node_type": "basic",
+                "Line_num": 40
+            },
+            {
+                "Id": {
+                    "Function_name": "quicksort",
+                    "Id": 3
+                },
+                "Code": "quicksort(a, lo, p - 1)",
+                "Node_type": "basic",
+                "Line_num": 39
+            },
+            {
+                "Id": {
+                    "Function_name": "quicksort",
+                    "Id": 4
+                },
+                "Code": "p = partition(a, lo, hi)",
+                "Node_type": "basic",
+                "Line_num": 37
+            },
+            {
+                "Id": {
+                    "Function_name": "quicksort",
+                    "Id": 5
+                },
+                "Code": "lo >= hi",
+                "Node_type": "cond",
+                "Line_num": 33
+            },
+            {
+                "Id": {
+                    "Function_name": "quicksort",
+                    "Id": 6
+                },
+                "Code": "return a",
+                "Node_type": "basic",
+                "Line_num": 34
+            }
+        ],
+        "Edges": [
+            {
+                "Id": {
+                    "Function_name": "quicksort",
+                    "Id": 0
+                },
+                "From_node_id": 2,
+                "To_node_id": 1,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "quicksort",
+                    "Id": 1
+                },
+                "From_node_id": 3,
+                "To_node_id": 2,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "quicksort",
+                    "Id": 2
+                },
+                "From_node_id": 4,
+                "To_node_id": 3,
+                "Label": ""
+            },
+            {
+                "Id": {
+                    "Function_name": "quicksort",
+                    "Id": 3
+                },
+                "From_node_id": 5,
+                "To_node_id": 6,
+                "Label": "True"
+            },
+            {
+                "Id": {
+                    "Function_name": "quicksort",
+                    "Id": 4
+                },
+                "From_node_id": 5,
+                "To_node_id": 4,
+                "Label": "False"
             }
         ]
     }
@@ -249,76 +615,131 @@ generates a CFG graph for every function defined in the file.
 
 ### CFG Mermaid format
 
+#### main
+
 ```mermaid
-%% try this layout maybe?
-%% ---
-%% config:
-%%   layout: elk
-%% ---
 flowchart TD
-1["`print(#34;Done#34;, x)`"]
-2{"`i > 0`"}
-3["`i--
-`"]
-4{"`i % 2 == 0`"}
-5{"`i % 3 == 0`"}
-6["`print(i, #34;is a multiple of 2 and 3\n#34;)`"]
-7["`print(i, #34;is a multiple of 2 and not a multiple of 3\n#34;)`"]
-8{"`i % 3 == 0`"}
-9["`print(i, #34;is not a multiple of 2, but a multiple of 3 \n#34;)`"]
-10["`print(i, #34;is not a multiple of both 2 and 3\n#34;)`"]
-11["`i = x`"]
-12["`Scanf(%d, x)`"]
-13["`print(#34;Enter non-negative integer:#34;)`"]
-14["`x = 0`"]
+1["`print(quicksort(arr, 0, n - 1), #34;\n#34;)`"]
+2{"`i < n`"}
+3["`i++`"]
+4["`arr[i] = x`"]
+5["`Scanf(%d, x)`"]
+6["`x = 0`"]
+7["`i = 0`"]
+8["`arr = make_array(n, 0)`"]
+9["`Scanf(%d, n)`"]
+10["`n = 0`"]
 3 --> 2
-6 --> 3
-7 --> 3
-5 -- True --> 6
-5 -- False --> 7
-9 --> 3
-10 --> 3
-8 -- True --> 9
-8 -- False --> 10
-4 -- True --> 5
-4 -- False --> 8
-2 -- True --> 4
+4 --> 3
+5 --> 4
+6 --> 5
+2 -- True --> 6
 2 -- False --> 1
-11 --> 2
-12 --> 11
+7 --> 2
+8 --> 7
+9 --> 8
+10 --> 9
+```
+
+#### partition
+
+```mermaid
+flowchart TD
+1["`return i`"]
+2["`a[hi] = tmp`"]
+3["`a[i] = a[hi]`"]
+4["`tmp = a[i]`"]
+5{"`j < hi`"}
+6["`j = j + 1`"]
+7{"`a[j] < pivot`"}
+8["`i = i + 1`"]
+9["`a[j] = tmp`"]
+10["`a[i] = a[j]`"]
+11["`tmp = a[i]`"]
+12["`j = lo`"]
+13["`i = lo`"]
+14["`pivot = a[hi]`"]
+2 --> 1
+3 --> 2
+4 --> 3
+6 --> 5
+8 --> 6
+9 --> 8
+10 --> 9
+11 --> 10
+7 -- True --> 11
+7 -- False --> 6
+5 -- True --> 7
+5 -- False --> 4
+12 --> 5
 13 --> 12
 14 --> 13
+```
+
+#### quicksort
+
+```mermaid
+flowchart TD
+1["`return a`"]
+2["`quicksort(a, p + 1, hi)`"]
+3["`quicksort(a, lo, p - 1)`"]
+4["`p = partition(a, lo, hi)`"]
+5{"`lo >= hi`"}
+6["`return a`"]
+2 --> 1
+3 --> 2
+4 --> 3
+5 -- True --> 6
+5 -- False --> 4
 ```
 
 ### Imp Code output
 
 ```
+fun partition(a ArrayType<int>, lo int, hi int) int {
+	pivot = a[hi]
+	i = lo
+	j = lo
+	while j < hi {
+		if a[j] < pivot {
+			tmp = a[i]
+			a[i] = a[j]
+			a[j] = tmp
+			i = i + 1
+		} else {
+
+		}
+		j = j + 1
+	}
+	tmp = a[i]
+	a[i] = a[hi]
+	a[hi] = tmp
+	return i
+}
+
+fun quicksort(a ArrayType<int>, lo int, hi int) ArrayType<int> {
+	if lo >= hi {
+		return a
+	} else {
+
+	}
+	p = partition(a, lo, hi)
+	quicksort(a, lo, p - 1)
+	quicksort(a, p + 1, hi)
+	return a
+}
+
 fun main() none {
-        x = 0
-        print("Enter non-negative integer:")
-        Scanf(%d, x)
-        i = x
-        while i > 0 {
-                if i % 2 == 0 {
-                        if i % 3 == 0 {
-                                print(i, "is a multiple of 2 and 3\n")
-                        } else {
-                                print(i, "is a multiple of 2 and not a multiple of 3\n")
-                        }
-
-                } else {
-                        if i % 3 == 0 {
-                                print(i, "is not a multiple of 2, but a multiple of 3 \n")
-                        } else {
-                                print(i, "is not a multiple of both 2 and 3\n")
-                        }
-
-                }
-
-                i--
-
-        }
-
-        print("Done", x)
+	n = 0
+	Scanf(%d, n)
+	arr = make_array(n, 0)
+	i = 0
+	while i < n {
+		x = 0
+		Scanf(%d, x)
+		arr[i] = x
+		i++
+	}
+	print(quicksort(arr, 0, n - 1), "\n")
 }
 ```
