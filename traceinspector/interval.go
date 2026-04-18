@@ -1,8 +1,24 @@
 package traceinspector
 
+import (
+	"fmt"
+	"strconv"
+)
+
+// We don't use math.Inf since it results in a float
 type IntervalDomainValue struct {
-	value                  int64
+	value                  int
 	is_infty, is_neg_infty bool // disregard value field if any of these values is true
+}
+
+func (v IntervalDomainValue) String() string {
+	if v.is_infty {
+		return "∞"
+	} else if v.is_neg_infty {
+		return "∞"
+	} else {
+		return strconv.Itoa(v.value)
+	}
 }
 
 // returns whether v is a finite value
@@ -71,6 +87,14 @@ func (lhs IntervalDomainValue) leq(rhs IntervalDomainValue) bool {
 type IntervalDomain struct {
 	lower, upper IntervalDomainValue
 	is_bottom    bool
+}
+
+func (domain IntervalDomain) String() string {
+	if domain.is_bottom {
+		return "⊥"
+	} else {
+		return fmt.Sprintf("[%s, %s]", domain.lower, domain.upper)
+	}
 }
 
 func (domain IntervalDomain) IsBot() bool {
