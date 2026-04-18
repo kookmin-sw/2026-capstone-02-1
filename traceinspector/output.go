@@ -9,7 +9,7 @@ import (
 type AnalyzerOutput struct {
 	Type          string
 	Function_name string
-	Node_id       int
+	Node_id       NodeID
 	Msg           string
 }
 
