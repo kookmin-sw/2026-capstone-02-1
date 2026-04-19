@@ -11,7 +11,7 @@ import (
 
 // if node id is leq 0, then the node doesn't exist
 type CFGGraphCreator struct {
-	func_name         string // name of the function
+	func_name         imp.ImpFunctionName // name of the function
 	fset              *token.FileSet
 	Cfg_graph         *CFGGraph
 	next_node_id      NodeID       // the next available node id
@@ -21,7 +21,7 @@ type CFGGraphCreator struct {
 }
 
 // Map from function names to CFGGraph
-type FunctionCFGMap map[string]*CFGGraph
+type FunctionCFGMap map[imp.ImpFunctionName]*CFGGraph
 
 type CFGContext interface {
 	isCFGContext()
@@ -199,7 +199,7 @@ func (graphcreator *CFGGraphCreator) create_cfg_method(stmts []imp.Stmt) NodeID 
 }
 
 // create and print the cfg into json
-func Create_cfg(functions map[string]imp.ImpFunction) FunctionCFGMap {
+func Create_cfg(functions imp.ImpFunctionMap) FunctionCFGMap {
 	var func_cfg_map FunctionCFGMap = make(FunctionCFGMap)
 	for fun_name, fun := range functions {
 		var entry_node_id NodeID = 1

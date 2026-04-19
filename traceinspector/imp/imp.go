@@ -451,7 +451,7 @@ func (expr OrExpr) String() string {
 
 type CallExpr struct {
 	Node
-	Func_name string
+	Func_name ImpFunctionName
 	Args      []Expr
 }
 
@@ -596,7 +596,7 @@ func (stmt DecStmt) String() string {
 
 type CallStmt struct {
 	Node
-	Func_name string
+	Func_name ImpFunctionName
 	Args      []Expr
 }
 

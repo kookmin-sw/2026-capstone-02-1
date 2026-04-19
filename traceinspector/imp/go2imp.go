@@ -19,7 +19,9 @@ func nodeString(n ast.Node) string {
 	return buf.String()
 }
 
-type ImpFunctionMap map[string]ImpFunction
+type ImpFunctionName string
+
+type ImpFunctionMap map[ImpFunctionName]ImpFunction
 
 type Go2ImpTranslator struct {
 	fset *token.FileSet
@@ -126,7 +128,7 @@ func (nh *Go2ImpTranslator) translate_CallExpr(expr *ast.CallExpr) Expr {
 		}
 		return &LenExpr{Node: nh.create_node_struct_from_ast(expr), Subexpr: translated_args[0]}
 	}
-	return &CallExpr{Node: nh.create_node_struct_from_ast(expr), Func_name: func_ident.Name, Args: translated_args}
+	return &CallExpr{Node: nh.create_node_struct_from_ast(expr), Func_name: ImpFunctionName(func_ident.Name), Args: translated_args}
 }
 
 func (nh *Go2ImpTranslator) translate_CompositeLit(expr *ast.CompositeLit) Expr {
@@ -246,7 +248,7 @@ func (nh *Go2ImpTranslator) translate_ExprStmt(stmt *ast.ExprStmt) []Stmt {
 	case "Printf":
 		return []Stmt{&PrintStmt{Node: nh.create_node_struct_from_ast(stmt), Args: translated_args}}
 	default:
-		return []Stmt{&CallStmt{Node: nh.create_node_struct_from_ast(stmt), Func_name: func_ident.Name, Args: translated_args}}
+		return []Stmt{&CallStmt{Node: nh.create_node_struct_from_ast(stmt), Func_name: ImpFunctionName(func_ident.Name), Args: translated_args}}
 	}
 }
 
@@ -348,7 +350,7 @@ func Translate_ast_file_to_imp(go_input_file *ast.File, fset *token.FileSet) Imp
 				}
 				return_type = translator.translate_ast_node_as_ImpType(func_decl.Type.Results.List[0].Type)
 			}
-			output[func_decl.Name.Name] = ImpFunction{Name: func_decl.Name.Name, Arg_pairs: func_argpairs, Body: translator.translate_Stmt(func_decl.Body), Return_type: return_type}
+			output[ImpFunctionName(func_decl.Name.Name)] = ImpFunction{Name: func_decl.Name.Name, Arg_pairs: func_argpairs, Body: translator.translate_Stmt(func_decl.Body), Return_type: return_type}
 		}
 	}
 	return output

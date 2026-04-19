@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"traceinspector/imp"
 )
 
 type AnalyzerOutput struct {
 	Type          string
-	Function_name string
+	Function_name imp.ImpFunctionName
 	Node_id       NodeID
 	Msg           string
 }

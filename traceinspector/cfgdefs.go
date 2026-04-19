@@ -23,7 +23,7 @@ const (
 )
 
 type CFGNodeLocation struct {
-	Function_name string
+	Function_name imp.ImpFunctionName
 	Id            NodeID
 }
 
@@ -72,7 +72,7 @@ func (node *CFGCondNode) To_mermaid() string {
 }
 
 type CFGEdgeLocation struct {
-	Function_name string
+	Function_name imp.ImpFunctionName
 	Id            EdgeID
 }
 

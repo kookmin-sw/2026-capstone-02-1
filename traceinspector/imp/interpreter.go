@@ -7,7 +7,7 @@ import (
 
 type ImpState struct {
 	vars                  map[string]ImpValues // all exprs are reduced to go values
-	current_function_name string
+	current_function_name ImpFunctionName
 	return_value          ImpValues // The return value of the current local scope, if exists
 }
 
@@ -367,7 +367,7 @@ func (interpreter *ImpInterpreter) eval_OrExpr(node OrExpr) ImpValues {
 }
 
 // Imp is pass-by-value for int/bool, but arrays are passed references
-func (interpreter *ImpInterpreter) eval_function_call(func_name string, args []Expr, line_num int) ImpValues {
+func (interpreter *ImpInterpreter) eval_function_call(func_name ImpFunctionName, args []Expr, line_num int) ImpValues {
 	// copy values if primitive
 	prepare_args := func(arg ImpValues) ImpValues {
 		switch arg_ty := arg.(type) {
