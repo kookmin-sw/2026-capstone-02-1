@@ -192,6 +192,7 @@ func (node *Node) GetLineNum() int {
 
 type Expr interface {
 	isExpr()
+	GetLineNum() int
 }
 
 type Stmt interface {
@@ -280,7 +281,7 @@ type SubExpr struct {
 func (*SubExpr) isExpr() {}
 
 func (expr SubExpr) String() string {
-	return fmt.Sprintf("%s - %s", expr.Lhs, expr.Rhs)
+	return fmt.Sprintf("(%s) - (%s)", expr.Lhs, expr.Rhs)
 }
 
 type MulExpr struct {
