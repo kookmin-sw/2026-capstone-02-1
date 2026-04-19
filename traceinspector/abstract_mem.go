@@ -40,12 +40,13 @@ func (val AbstractValue[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]) get_arr
 	return val.array_domain
 }
 
-// AbstractNodeState maps from variables to AbstractValue
-type AbstractNodeState[IntDomainImpl AbstractDomain[IntDomainImpl], BoolDomainImpl AbstractDomain[BoolDomainImpl], ArrayDomainImpl AbstractDomain[ArrayDomainImpl]] map[string]AbstractValue[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]
+// AbstractNodeMem maps from variables to AbstractValue
+type AbstractNodeMem[IntDomainImpl AbstractDomain[IntDomainImpl], BoolDomainImpl AbstractDomain[BoolDomainImpl], ArrayDomainImpl AbstractDomain[ArrayDomainImpl]] map[string]AbstractValue[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]
 
-// An abstract state for a function holds a map from nodes to AbstractImpState
-type FunctionAbstractState[IntDomainImpl AbstractDomain[IntDomainImpl], BoolDomainImpl AbstractDomain[BoolDomainImpl], ArrayDomainImpl AbstractDomain[ArrayDomainImpl]] struct {
-	states                map[int]AbstractNodeState[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]
+// An abstract Memory state for a function holds a map from nodes to AbstractNodeMem
+// mem represents the memory state at the **entry, before executing the node**.
+type FunctionAbstractMem[IntDomainImpl AbstractDomain[IntDomainImpl], BoolDomainImpl AbstractDomain[BoolDomainImpl], ArrayDomainImpl AbstractDomain[ArrayDomainImpl]] struct {
+	mem                   map[NodeID]AbstractNodeMem[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]
 	current_function_name string
 	return_value          AbstractValue[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]
 }

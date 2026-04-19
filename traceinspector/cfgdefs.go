@@ -27,6 +27,10 @@ type CFGNodeLocation struct {
 	Id            NodeID
 }
 
+func create_empty_node_location() CFGNodeLocation {
+	return CFGNodeLocation{}
+}
+
 type CFGNode struct {
 	Ast       imp.Stmt `json:"-"`
 	Id        CFGNodeLocation
