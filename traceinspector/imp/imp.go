@@ -192,6 +192,7 @@ func (node *Node) GetLineNum() int {
 
 type Expr interface {
 	isExpr()
+	GetLineNum() int
 }
 
 type Stmt interface {
@@ -405,6 +406,7 @@ func (expr GeqExpr) String() string {
 	return fmt.Sprintf("%s >= %s", expr.Lhs, expr.Rhs)
 }
 
+// arithmetic negation
 type NegExpr struct {
 	Node
 	Subexpr Expr
