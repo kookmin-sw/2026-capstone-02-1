@@ -1,6 +1,9 @@
 package traceinspector
 
-import "traceinspector/imp"
+import (
+	"traceinspector/domain"
+	"traceinspector/imp"
+)
 
 // Abstract states wrt arbitrary pointwise abstract domains
 
@@ -14,7 +17,7 @@ const (
 )
 
 // AbstractValue holds the abstract domain value for a variable
-type AbstractValue[IntDomainImpl AbstractDomain[IntDomainImpl], BoolDomainImpl AbstractDomain[BoolDomainImpl], ArrayDomainImpl AbstractDomain[ArrayDomainImpl]] struct {
+type AbstractValue[IntDomainImpl domain.AbstractDomain[IntDomainImpl], BoolDomainImpl domain.AbstractDomain[BoolDomainImpl], ArrayDomainImpl domain.AbstractDomain[ArrayDomainImpl]] struct {
 	domain_kind  AbstractDomainKind
 	int_domain   IntDomainImpl
 	bool_domain  BoolDomainImpl
@@ -43,12 +46,12 @@ func (val AbstractValue[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]) get_arr
 }
 
 // AbstractNodeMem maps from variables to AbstractValue
-type AbstractNodeMem[IntDomainImpl AbstractDomain[IntDomainImpl], BoolDomainImpl AbstractDomain[BoolDomainImpl], ArrayDomainImpl AbstractDomain[ArrayDomainImpl]] map[string]AbstractValue[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]
+type AbstractNodeMem[IntDomainImpl domain.AbstractDomain[IntDomainImpl], BoolDomainImpl domain.AbstractDomain[BoolDomainImpl], ArrayDomainImpl domain.AbstractDomain[ArrayDomainImpl]] map[string]AbstractValue[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]
 
 // An abstract Memory state for a function holds a map from nodes to AbstractNodeMem
 // mem represents the memory state at the **entry, before executing the node**.
 // the return value is also an abstraction of the possible return values
-type FunctionAbstractMem[IntDomainImpl AbstractDomain[IntDomainImpl], BoolDomainImpl AbstractDomain[BoolDomainImpl], ArrayDomainImpl AbstractDomain[ArrayDomainImpl]] struct {
+type FunctionAbstractMem[IntDomainImpl domain.AbstractDomain[IntDomainImpl], BoolDomainImpl domain.AbstractDomain[BoolDomainImpl], ArrayDomainImpl domain.AbstractDomain[ArrayDomainImpl]] struct {
 	mem           map[NodeID]AbstractNodeMem[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]
 	function_name imp.ImpFunctionName
 	return_value  AbstractValue[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]

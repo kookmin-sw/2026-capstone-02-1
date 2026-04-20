@@ -1,12 +1,15 @@
 package traceinspector
 
-import "traceinspector/imp"
+import (
+	"traceinspector/domain"
+	"traceinspector/imp"
+)
 
 // This is the main struct for initializing abstract interpretation.
 //
 // abstract_semantics: The interface implementing the abstract step relation
 // function_mem_map:
-type AbstractAnalyzer[IntDom AbstractDomain[IntDom], BoolDom AbstractDomain[BoolDom], ArrDom AbstractDomain[ArrDom]] struct {
+type AbstractAnalyzer[IntDom domain.AbstractDomain[IntDom], BoolDom domain.AbstractDomain[BoolDom], ArrDom domain.AbstractDomain[ArrDom]] struct {
 	abstract_semantics AbstractSemantics[IntDom, BoolDom, ArrDom]
 	function_mem_map   map[imp.ImpFunctionName]*FunctionAbstractMem[IntDom, BoolDom, ArrDom]
 	function_cfgs      FunctionCFGMap

@@ -1,4 +1,4 @@
-package traceinspector
+package domain
 
 type AbstractDomain[DomainImpl any] interface {
 	IsBot() bool

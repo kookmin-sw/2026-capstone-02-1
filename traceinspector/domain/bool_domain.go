@@ -1,4 +1,4 @@
-package traceinspector
+package domain
 
 import "fmt"
 

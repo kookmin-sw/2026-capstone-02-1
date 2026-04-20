@@ -1,4 +1,4 @@
-package traceinspector
+package algebra
 
 import (
 	"go/ast"
