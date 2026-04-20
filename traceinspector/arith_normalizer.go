@@ -9,7 +9,8 @@ import (
 // 1. e1 <= e2 -> e1 - e2 <= 0  I named this as zero-rhs form
 // 2. ax + by + c <= 0 where a and b are integer constants and x y are identifiers
 
-// Given an integer (in)equality expression of the form `e1 ☉ e2“, convert to `e1 - (e2) ☉ 0`
+// Given an integer (in)equality expression of the form `e1 ☉ e2“, convert to `e1 - (e2) ☉ 0`,
+// where ☉ is a comparison operator int -> int -> bool.
 func zero_rhs(expr imp.Expr) (imp.Expr, error) {
 	switch expr_ty := expr.(type) {
 	case *imp.EqExpr:
@@ -35,6 +36,53 @@ func zero_rhs(expr imp.Expr) (imp.Expr, error) {
 	}
 }
 
+// --e -> e
+// e - e -> e + -e
+// Given an intege expression, convert all subtraction into addition, and simplify any double negations
+func convert_subtraction_to_neg(expr imp.Expr, negate bool) imp.Expr {
+	switch expr_ty := expr.(type) {
+	case *imp.VarExpr, *imp.ArrayIndexExpr, *imp.LenExpr:
+		if negate {
+			return &imp.NegExpr{Node: imp.Node{Line_num: expr.GetLineNum()}, Subexpr: expr_ty}
+		} else {
+			return expr
+		}
+	case *imp.IntLitExpr:
+		if negate {
+			return &imp.IntLitExpr{Node: expr_ty.Node, Value: -expr_ty.Value}
+		} else {
+			return expr
+		}
+	case *imp.NegExpr:
+		if negate {
+			return expr_ty.Subexpr
+		} else {
+			return &imp.NegExpr{Node: expr_ty.Node, Subexpr: convert_subtraction_to_neg(expr_ty.Subexpr, true)}
+		}
+	case *imp.AddExpr:
+		return &imp.AddExpr{Node: expr_ty.Node, Lhs: convert_subtraction_to_neg(expr_ty.Lhs, negate), Rhs: convert_subtraction_to_neg(expr_ty.Rhs, negate)}
+	case *imp.SubExpr:
+		// - (lhs - rhs) -> -lhs + rhs
+		// (lhs - rhs) -> lhs + -rhs
+		if negate {
+			return &imp.AddExpr{Node: expr_ty.Node, Lhs: convert_subtraction_to_neg(expr_ty.Lhs, true), Rhs: convert_subtraction_to_neg(expr_ty.Rhs, false)}
+		} else {
+			return &imp.AddExpr{Node: expr_ty.Node, Lhs: convert_subtraction_to_neg(expr_ty.Lhs, false), Rhs: convert_subtraction_to_neg(expr_ty.Rhs, true)}
+		}
+	case *imp.MulExpr:
+		// multiplication, division, remainder doesn't propogate parity
+		return &imp.MulExpr{Node: expr_ty.Node, Lhs: convert_subtraction_to_neg(expr_ty.Lhs, false), Rhs: convert_subtraction_to_neg(expr_ty.Rhs, false)}
+	case *imp.DivExpr:
+		return &imp.DivExpr{Node: expr_ty.Node, Lhs: convert_subtraction_to_neg(expr_ty.Lhs, false), Rhs: convert_subtraction_to_neg(expr_ty.Rhs, false)}
+	case *imp.ModExpr:
+		return &imp.ModExpr{Node: expr_ty.Node, Lhs: convert_subtraction_to_neg(expr_ty.Lhs, false), Rhs: convert_subtraction_to_neg(expr_ty.Rhs, false)}
+	case *imp.ParenExpr:
+		return &imp.ParenExpr{Node: expr_ty.Node, Subexpr: convert_subtraction_to_neg(expr_ty.Subexpr, false)}
+	default:
+		return expr_ty
+	}
+}
+
 // Represents a linear arithmetic Polynomial ax + by + ... + cz + C,
 // variable_expr: ax + by + ... + cz
 // constant: C
@@ -50,7 +98,7 @@ func build_polynomial(expr imp.Expr) (Polynomial, error) {
 	case *imp.VarExpr:
 		accumulated.variable_expr = expr_ty
 	case *imp.IntLitExpr:
-		accumulated.constant += expr_ty.Value
+		accumulated.constant = expr_ty.Value
 	case *imp.ArrayLitExpr:
 		accumulated.variable_expr = expr_ty
 	case *imp.ArrayIndexExpr:
@@ -78,7 +126,7 @@ func build_polynomial(expr imp.Expr) (Polynomial, error) {
 			return lhs_poly, nil
 		} else {
 			accumulated.variable_expr = &imp.AddExpr{Node: expr_ty.Node, Lhs: lhs_poly.variable_expr, Rhs: rhs_poly.variable_expr}
-			accumulated.constant += lhs_poly.constant + rhs_poly.constant
+			accumulated.constant = lhs_poly.constant + rhs_poly.constant
 		}
 	case *imp.SubExpr:
 		lhs_poly, err := build_polynomial(expr_ty.Lhs)
@@ -97,7 +145,7 @@ func build_polynomial(expr imp.Expr) (Polynomial, error) {
 			return lhs_poly, nil
 		} else {
 			accumulated.variable_expr = &imp.SubExpr{Node: expr_ty.Node, Lhs: lhs_poly.variable_expr, Rhs: rhs_poly.variable_expr}
-			accumulated.constant += lhs_poly.constant - rhs_poly.constant
+			accumulated.constant = lhs_poly.constant - rhs_poly.constant
 		}
 	case *imp.MulExpr:
 		// For the case of multiplication
@@ -158,23 +206,21 @@ func build_polynomial(expr imp.Expr) (Polynomial, error) {
 		if err != nil {
 			return Polynomial{}, err
 		}
-		if sub_poly.variable_expr == nil {
-			accumulated.constant -= sub_poly.constant
-		} else {
+		if sub_poly.variable_expr != nil {
 			accumulated.variable_expr = &imp.NegExpr{Node: expr_ty.Node, Subexpr: sub_poly.variable_expr}
-			accumulated.constant -= accumulated.constant
+
 		}
+		accumulated.constant = -sub_poly.constant
 	case *imp.ParenExpr:
 		sub_poly, err := build_polynomial(expr_ty.Subexpr)
 		if err != nil {
 			return Polynomial{}, err
 		}
-		if sub_poly.variable_expr == nil {
-			accumulated.constant += sub_poly.constant
-		} else {
+		if sub_poly.variable_expr != nil {
 			accumulated.variable_expr = &imp.ParenExpr{Node: expr_ty.Node, Subexpr: sub_poly.variable_expr}
-			accumulated.constant += accumulated.constant
+
 		}
+		accumulated.constant = sub_poly.constant
 	default:
 		return Polynomial{}, fmt.Errorf("build_polynomial: unsupported expressions %s", expr_ty)
 	}
@@ -184,7 +230,7 @@ func build_polynomial(expr imp.Expr) (Polynomial, error) {
 // Given an arbitrary integer expression, normalize to the form
 // ax ☉ by ☉ ... ☉ cz + C, where C is an integer constant
 func normalize_integer_expr(expr imp.Expr) (imp.Expr, error) {
-	poly, err := build_polynomial(expr)
+	poly, err := build_polynomial(convert_subtraction_to_neg(expr, false))
 	if err != nil {
 		return nil, err
 	} else {
