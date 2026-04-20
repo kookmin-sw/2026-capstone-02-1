@@ -15,5 +15,8 @@ func Test_ExtInt(t *testing.T) {
 
 	t.Log("5 <= ∞ ==", ExtInt_Finite(5).Leq(ExtInt_Infty()))
 	t.Log("5 <= -∞ ==", ExtInt_Finite(5).Leq(ExtInt_NegInfty()))
+	t.Log("5 <= 4 ==", ExtInt_Finite(5).Leq(ExtInt_Finite(4)))
+
+	t.Log("min(5, -3, ∞) =", ExtInt_Finite(5).Min(ExtInt_Finite(-3), ExtInt_Infty()))
 
 }

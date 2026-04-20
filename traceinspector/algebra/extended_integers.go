@@ -5,26 +5,30 @@ import "strconv"
 // This file defines an "extended" integer type, the integer set Z augmented with positive and negative infinity
 
 type ExtInt struct {
-	Value              int
+	value              int
 	is_inf, is_neg_inf bool
 }
 
-func (eint ExtInt) String() string {
-	if eint.is_inf {
+func (lhs ExtInt) String() string {
+	if lhs.is_inf {
 		return "∞"
-	} else if eint.is_neg_inf {
+	} else if lhs.is_neg_inf {
 		return "-∞"
 	} else {
-		return strconv.Itoa(eint.Value)
+		return strconv.Itoa(lhs.value)
 	}
 }
 
+func (eint ExtInt) Value() int {
+	return eint.value
+}
+
 func ExtInt_Finite(val int) ExtInt {
-	return ExtInt{Value: val}
+	return ExtInt{value: val}
 }
 
 func ExtInt_Zero() ExtInt {
-	return ExtInt{Value: 0}
+	return ExtInt{value: 0}
 }
 
 func ExtInt_Infty() ExtInt {
@@ -35,20 +39,28 @@ func ExtInt_NegInfty() ExtInt {
 	return ExtInt{is_neg_inf: true}
 }
 
-func (eint ExtInt) IsFinite() bool {
-	return !(eint.is_inf || eint.is_neg_inf)
+func (lhs ExtInt) IsFinite() bool {
+	return !(lhs.IsInfty() || lhs.IsNegInfty())
 }
 
-func (eint ExtInt) IsPositive() bool {
-	return (eint.IsFinite() && eint.Value > 0) || eint.is_inf
+func (lhs ExtInt) IsInfty() bool {
+	return lhs.is_inf
 }
 
-func (eint ExtInt) IsNegative() bool {
-	return (eint.IsFinite() && eint.Value < 0) || eint.is_neg_inf
+func (lhs ExtInt) IsNegInfty() bool {
+	return lhs.is_neg_inf
+}
+
+func (lhs ExtInt) IsPositive() bool {
+	return (lhs.IsFinite() && lhs.value > 0) || lhs.is_inf
+}
+
+func (lhs ExtInt) IsNegative() bool {
+	return (lhs.IsFinite() && lhs.value < 0) || lhs.is_neg_inf
 }
 
 func (lhs ExtInt) Eq(rhs ExtInt) bool {
-	return (lhs.is_inf && rhs.is_inf) || (lhs.is_neg_inf && rhs.is_neg_inf) || (lhs.IsFinite() && rhs.IsFinite() && lhs.Value == rhs.Value)
+	return (lhs.is_inf && rhs.is_inf) || (lhs.is_neg_inf && rhs.is_neg_inf) || (lhs.IsFinite() && rhs.IsFinite() && lhs.value == rhs.value)
 }
 
 func (lhs ExtInt) Leq(rhs ExtInt) bool {
@@ -64,16 +76,16 @@ func (lhs ExtInt) Leq(rhs ExtInt) bool {
 	}
 
 	// remaining case is lhs, rhs = Z
-	return lhs.Value <= rhs.Value
+	return lhs.value <= rhs.value
 }
 
-func (eint ExtInt) Neg() ExtInt {
-	if eint.is_inf {
+func (lhs ExtInt) Neg() ExtInt {
+	if lhs.is_inf {
 		return ExtInt_NegInfty()
-	} else if eint.is_neg_inf {
+	} else if lhs.is_neg_inf {
 		return ExtInt_Infty()
 	} else {
-		return ExtInt{Value: -eint.Value}
+		return ExtInt{value: -lhs.value}
 	}
 }
 
@@ -84,7 +96,7 @@ func (lhs ExtInt) Add(rhs ExtInt) ExtInt {
 	if lhs.is_neg_inf || rhs.is_neg_inf {
 		return ExtInt_NegInfty()
 	}
-	return ExtInt{Value: lhs.Value + rhs.Value}
+	return ExtInt{value: lhs.value + rhs.value}
 }
 
 func (lhs ExtInt) Sub(rhs ExtInt) ExtInt {
@@ -95,7 +107,7 @@ func (lhs ExtInt) Sub(rhs ExtInt) ExtInt {
 	if lhs.is_neg_inf || rhs.is_neg_inf {
 		return ExtInt_NegInfty()
 	}
-	return ExtInt{Value: lhs.Value - rhs.Value}
+	return ExtInt{value: lhs.value - rhs.value}
 }
 
 func (lhs ExtInt) Mul(rhs ExtInt) ExtInt {
@@ -104,7 +116,7 @@ func (lhs ExtInt) Mul(rhs ExtInt) ExtInt {
 		return ExtInt_Zero()
 	}
 	if lhs.IsFinite() && rhs.IsFinite() {
-		return ExtInt{Value: lhs.Value * rhs.Value}
+		return ExtInt{value: lhs.value * rhs.value}
 	}
 	// at least one value is +- inf, so the value is inf; just have to define the sign
 	switch lhs.IsPositive() {
@@ -125,4 +137,26 @@ func (lhs ExtInt) Mul(rhs ExtInt) ExtInt {
 		}
 	}
 	panic("This should never ever happen")
+}
+
+// Compute the minimum of two ExtInts
+func (lhs ExtInt) Min(rhs ...ExtInt) ExtInt {
+	return_val := lhs
+	for _, val := range rhs {
+		if val.Leq(return_val) {
+			return_val = val
+		}
+	}
+	return return_val
+}
+
+// Compute the maximum of two ExtInts
+func (lhs ExtInt) Max(rhs ...ExtInt) ExtInt {
+	return_val := lhs
+	for _, val := range rhs {
+		if return_val.Leq(val) {
+			return_val = val
+		}
+	}
+	return return_val
 }
