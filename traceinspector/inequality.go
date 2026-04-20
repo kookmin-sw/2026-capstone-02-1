@@ -5,60 +5,75 @@ import (
 	"traceinspector/imp"
 )
 
-// Represent an inequality of the form ±x ±y <= C and ±x <= C, where x and y are variables.
-// Also supports the form .
+// Represent an inequality of the form ±x ±y <= C and ±x <= C, where x and y are addressible.
+// x and y must be one of imp.VarExpr, imp.ArrayIndexExpr, imp.LenExpr.
+// If y_coeff is SimpleInequalityCoeff_zero, it means y doesn't exist
 type SimpleInequality struct {
-	x_varname string // variable name
-	x_is_pos  bool   // whether coefficient of x is positive
-	y_exists  bool   // whether the y variable exists
-	y_varname string // variable name
-	y_is_pos  bool   // whether coefficient of y is positive
-	constant  int    // constant value
+	x_expr   imp.Expr              // variable or arrayindexop or len()
+	x_coeff  SimpleInequalityCoeff // whether coefficient of x is positive
+	y_expr   imp.Expr              // same as x_expr
+	y_coeff  SimpleInequalityCoeff // whether coefficient of y is positive
+	constant int                   // constant value
 }
+
+type SimpleInequalityCoeff int
+
+const (
+	SimpleInequalityCoeff_zero SimpleInequalityCoeff = iota
+	SimpleInequalityCoeff_negative
+	SimpleInequalityCoeff_positive
+)
 
 func (ieq SimpleInequality) String() string {
-	var x_sign string
-	var y_sign string = "+"
-	if !ieq.x_is_pos {
+	var x_sign, y_sign string
+	switch ieq.x_coeff {
+	case SimpleInequalityCoeff_negative:
 		x_sign = "-"
 	}
-	if !ieq.y_is_pos {
+	switch ieq.y_coeff {
+	case SimpleInequalityCoeff_zero:
+		return fmt.Sprintf("%s%s <= %d", x_sign, ieq.x_expr, ieq.constant)
+	case SimpleInequalityCoeff_negative:
 		y_sign = "-"
 	}
-	if ieq.y_exists {
-		return fmt.Sprintf("%s%s %s %s <= %d", x_sign, ieq.x_varname, y_sign, ieq.y_varname, ieq.constant)
-	} else {
-		return fmt.Sprintf("%s%s <= %d", x_sign, ieq.x_varname, ieq.constant)
-	}
+	return fmt.Sprintf("%s%s + %s%s <= %d", x_sign, ieq.x_expr, y_sign, ieq.y_expr, ieq.constant)
+
 }
 
-// Given an imp.Expr, check if the expr is of the form +-var. Only used within imp_expr_to_simp_inequality
-func _check_if_var(expr imp.Expr) (var_name string, is_negative bool) {
-	var_name = ""
-	is_negative = false
+// Given an imp.Expr, check if the expr is of the form +-expr. Only used within imp_expr_to_simp_inequality
+func _check_if_var(expr imp.Expr) (imp.Expr, SimpleInequalityCoeff) {
 	switch expr_ty := expr.(type) {
 	case *imp.NegExpr:
-		is_negative = true
-		var_name_res, is_negative_res := _check_if_var(expr_ty.Subexpr)
-		is_negative = is_negative != is_negative_res // xor
-		var_name = var_name_res
+		subexpr, sub_coeff := _check_if_var(expr_ty.Subexpr)
+		switch sub_coeff {
+		case SimpleInequalityCoeff_zero:
+			return nil, SimpleInequalityCoeff_zero
+		case SimpleInequalityCoeff_negative:
+			return subexpr, SimpleInequalityCoeff_positive
+		case SimpleInequalityCoeff_positive:
+			return subexpr, SimpleInequalityCoeff_negative
+		}
 	case *imp.VarExpr:
-		var_name = expr_ty.Name
+		return expr_ty, SimpleInequalityCoeff_positive
+	case *imp.LenExpr:
+		return expr_ty, SimpleInequalityCoeff_positive
+	case *imp.ArrayIndexExpr:
+		return expr_ty, SimpleInequalityCoeff_positive
 	}
-	return
+	return nil, SimpleInequalityCoeff_zero
 }
 
-// Also verify that an expression is either a variable or a negation of it
-func _check_binary_expr(expr imp.Expr) (string, bool, string, bool) {
+// Also verify that an expression is either a valid simpleineq expr or a negation of it
+func _check_binary_expr(expr imp.Expr) (imp.Expr, SimpleInequalityCoeff, imp.Expr, SimpleInequalityCoeff) {
 	switch expr_ty := expr.(type) {
 	case *imp.AddExpr:
-		x_varname, x_is_neg := _check_if_var(expr_ty.Lhs)
-		y_varname, y_is_neg := _check_if_var(expr_ty.Rhs)
-		return x_varname, x_is_neg, y_varname, y_is_neg
+		lhs_expr, lhs_coeff := _check_if_var(expr_ty.Lhs)
+		rhs_expr, rhs_coeff := _check_if_var(expr_ty.Rhs)
+		return lhs_expr, lhs_coeff, rhs_expr, rhs_coeff
 	case *imp.ParenExpr:
 		return _check_binary_expr(expr_ty.Subexpr)
 	}
-	return "", false, "", false
+	return nil, SimpleInequalityCoeff_zero, nil, SimpleInequalityCoeff_zero
 }
 
 // Given an imp leq expression, try and convert the expression into a SimpleInequality.
@@ -94,23 +109,22 @@ func imp_expr_to_simp_inequality(expr imp.Expr) (SimpleInequality, bool) {
 		created_ineq.constant = -lhs_poly.constant // send constant to other side of leq
 
 		// check if the polynomial is the form `±x + C`
-		single_varname, single_var_is_neg := _check_if_var(lhs_poly.variable_expr)
-		if single_varname != "" {
-			created_ineq.x_varname = single_varname
-			created_ineq.y_exists = false
-			created_ineq.x_is_pos = !single_var_is_neg
+		single_expr, single_coeff := _check_if_var(lhs_poly.variable_expr)
+		if single_expr != nil {
+			created_ineq.x_expr = single_expr
+			created_ineq.y_coeff = SimpleInequalityCoeff_zero
+			created_ineq.x_coeff = single_coeff
 			return created_ineq, true
 		}
 
 		// check if the polynomial is the form `±x ±y`
-		x_varname, x_is_neg, y_varname, y_is_neg := _check_binary_expr(lhs_poly.variable_expr)
+		x_expr, x_coeff, y_expr, y_coeff := _check_binary_expr(lhs_poly.variable_expr)
 
-		if x_varname != "" && y_varname != "" {
-			created_ineq.x_varname = x_varname
-			created_ineq.x_is_pos = !x_is_neg
-			created_ineq.y_exists = true
-			created_ineq.y_varname = y_varname
-			created_ineq.y_is_pos = !y_is_neg
+		if x_expr != nil && y_expr != nil {
+			created_ineq.x_expr = x_expr
+			created_ineq.x_coeff = x_coeff
+			created_ineq.y_expr = y_expr
+			created_ineq.y_coeff = y_coeff
 			return created_ineq, true
 		}
 	}

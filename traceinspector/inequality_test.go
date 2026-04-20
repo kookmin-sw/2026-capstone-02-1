@@ -24,8 +24,8 @@ func Test_inequality(t *testing.T) {
 				switch expr.Op {
 				case token.EQL, token.NEQ, token.GEQ, token.LEQ, token.GTR, token.LSS:
 					original := translator.Translate_Expr(expr)
-					original, _ = zero_rhs(original)
-					new_expr, safe := imp_expr_to_simp_inequality(original)
+					original_zero, _ := zero_rhs(original)
+					new_expr, safe := imp_expr_to_simp_inequality(original_zero)
 					if safe {
 						t.Errorf("ineq: %s -> %s\n", original, new_expr)
 					}
