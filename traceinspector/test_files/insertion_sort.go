@@ -7,12 +7,14 @@ import "fmt"
 func insertionSort(arr []int) []int {
 	i := 1
 
-	for i < len(arr) {
+	arr_len := len(arr)
+	for i < arr_len {
 		key := arr[i]
 		j := i - 1
 
 		for j >= 0 {
-			if arr[j] > key {
+			cur := arr[j]
+			if cur > key {
 				arr[j+1] = arr[j]
 				j = j - 1
 				continue

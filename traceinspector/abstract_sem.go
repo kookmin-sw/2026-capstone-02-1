@@ -17,14 +17,3 @@ type AbstractState[IntDomainImpl AbstractDomain[IntDomainImpl], BoolDomainImpl A
 type AbstractSemantics[IntDomainImpl AbstractDomain[IntDomainImpl], BoolDomainImpl AbstractDomain[BoolDomainImpl], ArrayDomainImpl AbstractDomain[ArrayDomainImpl]] interface {
 	Step(AbstractState[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]) []AbstractState[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]
 }
-
-// type AnalyzerState struct {
-// 	cfg_graph        *CFGGraph
-// 	imp_function_map imp.ImpFunctionMap
-// 	node_state_map   *NodeStateMap // map from node ID to abstract program state
-// 	worklist []
-// }
-
-// func (a_state *AnalyzerState) step_function(function_name string, function_args ...any) {
-// 	imp_function, imp_function_exists := a_state.imp_function_map[function_name]
-// }

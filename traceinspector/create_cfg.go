@@ -123,7 +123,7 @@ func (graphcreator *CFGGraphCreator) create_cfg_cond_edge(from_id NodeID, to_tru
 }
 
 // The driver function for creating the CFG graph. stmt is the current statement node.
-// linkback, if not 0, equals the node id that an edge should be created from the current node to the linkback ID
+// Returns the NodeID of the created node.
 func (graphcreator *CFGGraphCreator) create_cfg_method(stmts []imp.Stmt) NodeID {
 	if len(stmts) == 0 {
 		return 0
