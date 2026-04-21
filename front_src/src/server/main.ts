@@ -7,6 +7,7 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 import url from "url";
+import os from "os";
 
 import { exec } from "child_process";
 
@@ -22,7 +23,8 @@ const PROGRAM_DIR = path.resolve(__dirname, "../../bin");
 const OUTPUT_DIR = path.resolve(__dirname, "../../json");
 
 const UPLOAD_NAME = "source.go";
-const PROGRAM_NAME = "traceinspector.exe";
+const PROGRAM_NAME = (os.platform() == "win32") ? "traceinspector.exe" : "traceinspector.o";
+
 const OUTPUT_NAME = "output.json";
 
 const UPLOAD_PATH = path.join(UPLOAD_DIR, UPLOAD_NAME);
