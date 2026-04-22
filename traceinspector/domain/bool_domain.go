@@ -1,6 +1,9 @@
 package domain
 
-import "fmt"
+import (
+	"fmt"
+	"traceinspector/imp"
+)
 
 type BoolDomain struct {
 	val               bool
@@ -15,6 +18,10 @@ func (domain BoolDomain) String() string {
 	} else {
 		return fmt.Sprintf("%t", domain.val)
 	}
+}
+
+func (domain BoolDomain) From_BoolLitExpr(expr imp.BoolLitExpr) BoolDomain {
+	return BoolDomain{val: expr.Value}
 }
 
 func (domain BoolDomain) IsBot() bool {
