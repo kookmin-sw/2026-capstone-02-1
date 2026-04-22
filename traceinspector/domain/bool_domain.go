@@ -20,6 +20,10 @@ func (domain BoolDomain) String() string {
 	}
 }
 
+func (domain BoolDomain) Clone() BoolDomain {
+	return BoolDomain{val: domain.val, is_bottom: domain.is_bottom, is_top: domain.is_top}
+}
+
 func (domain BoolDomain) From_BoolLitExpr(expr imp.BoolLitExpr) BoolDomain {
 	return BoolDomain{val: expr.Value}
 }

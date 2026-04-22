@@ -1,13 +1,16 @@
-package domain
+package traceinspector
 
-import "fmt"
+import (
+	"fmt"
+	"traceinspector/domain"
+)
 
-type ArraySummaryDomain[ElemDomain AbstractDomain[ElemDomain]] struct {
-	val               ElemDomain
+type ArraySummaryDomain[IntDomainImpl domain.IntegerDomain[IntDomainImpl]] struct {
+	val               IntDomainImpl
 	is_bottom, is_top bool
 }
 
-func (domain ArraySummaryDomain[ElemDomain]) String() string {
+func (domain ArraySummaryDomain[IntDomainImpl]) String() string {
 	if domain.is_bottom {
 		return "⊥_bool"
 	} else if domain.is_top {
@@ -15,6 +18,10 @@ func (domain ArraySummaryDomain[ElemDomain]) String() string {
 	} else {
 		return fmt.Sprintf("%s", domain.val)
 	}
+}
+
+func (domain ArraySummaryDomain[ElemDomain]) Clone() ArraySummaryDomain[ElemDomain] {
+	return ArraySummaryDomain[ElemDomain]{val: domain.val, is_bottom: domain.is_bottom, is_top: domain.is_top}
 }
 
 func (domain ArraySummaryDomain[ElemDomain]) IsBot() bool {

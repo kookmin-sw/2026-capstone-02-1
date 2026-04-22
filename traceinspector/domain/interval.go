@@ -20,6 +20,10 @@ func (domain IntervalDomain) String() string {
 	}
 }
 
+func (domain IntervalDomain) Clone() IntervalDomain {
+	return IntervalDomain{lower: domain.lower, upper: domain.upper, is_bottom: domain.is_bottom}
+}
+
 func IntervalBot() IntervalDomain {
 	return IntervalDomain{is_bottom: true}
 }

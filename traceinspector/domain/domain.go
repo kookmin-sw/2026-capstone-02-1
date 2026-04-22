@@ -9,6 +9,7 @@ type AbstractDomain[DomainImpl any] interface {
 	Join(DomainImpl) DomainImpl  // abstract join operator `lhs ⊔ rhs`
 	Widen(DomainImpl) DomainImpl // widening operator `lhs ▽ rhs`
 	String() string              // return string representation of the domain value
+	Clone() DomainImpl           // Return a copy of the domain
 }
 
 type IntegerDomain[DomainImpl any] interface {
@@ -20,7 +21,7 @@ type IntegerDomain[DomainImpl any] interface {
 	Div(DomainImpl) DomainImpl
 	Mod(DomainImpl) DomainImpl
 	Eq(DomainImpl) BoolDomain
-	NEq(DomainImpl) BoolDomain
+	Neq(DomainImpl) BoolDomain
 	Lessthan(DomainImpl) BoolDomain
 	Greaterthan(DomainImpl) BoolDomain
 	Leq(DomainImpl) BoolDomain

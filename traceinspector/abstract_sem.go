@@ -11,11 +11,18 @@ type AnalyzerSettings struct {
 }
 
 // An AbstractState is the pair (l, M^#) ↪ (l', M^#') used in the abstract transition relation
-// node_id: node ID to be interpreted
+// node_location: node location to be interpreted
 // abstract_mem: the input abstract memory state wrt the node should be interpreted
 type AbstractState[IntDomainImpl domain.IntegerDomain[IntDomainImpl], ArrayDomainImpl ArrayDomain[IntDomainImpl, ArrayDomainImpl]] struct {
-	node_id      NodeID
-	abstract_mem AbstractNodeMem[IntDomainImpl, ArrayDomainImpl]
+	node_location CFGNodeLocation
+	abstract_mem  AbstractNodeMem[IntDomainImpl, ArrayDomainImpl]
+}
+
+func (state AbstractState[IntDomainImpl, ArrayDomainImpl]) Clone() AbstractState[IntDomainImpl, ArrayDomainImpl] {
+	new_st := AbstractState[IntDomainImpl, ArrayDomainImpl]{}
+	new_st.node_location = state.node_location
+	new_st.abstract_mem = state.abstract_mem.Clone()
+	return new_st
 }
 
 // Step: Given an input state (l, m^#), execute the abstract step relation for l under memory state m^#, and
@@ -33,10 +40,10 @@ type ImpFunctionInterpreter[IntDomainImpl domain.IntegerDomain[IntDomainImpl], A
 	func_cfg_map        FunctionCFGMap
 	func_name           imp.ImpFunctionName
 	func_info_map       imp.ImpFunctionMap
-	abstract_mem        *FunctionAbstractMem[IntDomainImpl, ArrayDomainImpl]
-	intdomain_default   IntDomainImpl     // an instantiation of the integer domain impl
-	booldomain_default  domain.BoolDomain // an instantiation of the boolean domain
-	arraydomain_default ArrayDomainImpl   // an instantiation of the array domain impl
+	abstract_mem        *FunctionAbstractMem[IntDomainImpl, ArrayDomainImpl] // joined global state
+	intdomain_default   IntDomainImpl                                        // an instantiation of the integer domain impl
+	booldomain_default  domain.BoolDomain                                    // an instantiation of the boolean domain
+	arraydomain_default ArrayDomainImpl                                      // an instantiation of the array domain impl
 }
 
 // Compute the abstract value of an expression expr under an abstract memory state abs_mem
@@ -104,18 +111,46 @@ func (interpreter *ImpFunctionInterpreter[IntDomainImpl, ArrayDomainImpl]) Eval_
 		result_val := arr_val.Get_array().Index(index_val.Get_int())
 		return result_val
 	case *imp.EqExpr:
+		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
+		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		if lhs_val.domain_kind != rhs_val.domain_kind {
+			write_error(node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different", expr_ty))
+		}
+		result_val := lhs_val.Get_int().Eq(rhs_val.Get_int())
+		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind, bool_domain: result_val}
+	case *imp.NeqExpr:
+		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
+		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		if lhs_val.domain_kind != rhs_val.domain_kind {
+			write_error(node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different", expr_ty))
+		}
+		result_val := lhs_val.Get_int().Neq(rhs_val.Get_int())
+		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind, bool_domain: result_val}
 	}
 	return AbstractValue[IntDomainImpl, ArrayDomainImpl]{}
 }
 
-// func (interpreter *ImpFunctionInterpreter[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]) Step(in_state AbstractState[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl]) []AbstractState[IntDomainImpl, BoolDomainImpl, ArrayDomainImpl] {
-// 	cfg_node, cfg_node_exists := interpreter.func_cfg_map[interpreter.func_name].Node_map[in_state.node_id]
-// 	if !cfg_node_exists {
-// 		write_error(create_empty_node_location(), fmt.Sprintf("The designated CFG Node %d doesn't exist", in_state.node_id))
-// 	}
-// 	switch cfg_node := cfg_node.(type) {
-// 	case *CFGNode:
-// 		stmt := cfg_node.Ast
-// 	case *CFGCondNode:
-// 	}
-// }
+func (interpreter *ImpFunctionInterpreter[IntDomainImpl, ArrayDomainImpl]) Step(in_state AbstractState[IntDomainImpl, ArrayDomainImpl]) []AbstractState[IntDomainImpl, ArrayDomainImpl] {
+	cfg_node, cfg_node_exists := interpreter.func_cfg_map[interpreter.func_name].Node_map[in_state.node_location.Id]
+	if !cfg_node_exists {
+		write_error(create_empty_node_location(), fmt.Sprintf("The designated CFG Node %d doesn't exist", in_state.node_location))
+	}
+	var return_states []AbstractState[IntDomainImpl, ArrayDomainImpl]
+	switch cfg_node := cfg_node.(type) {
+	case *CFGNode:
+		switch stmt := cfg_node.Ast.(type) {
+		case *imp.AssignStmt:
+			rhs_val := interpreter.Eval_expr(in_state.node_location, stmt.Rhs, in_state.abstract_mem)
+			switch lhs_ty := stmt.Lhs.(type) {
+			case *imp.VarExpr:
+				_, var_exists := in_state.abstract_mem[lhs_ty.Name]
+				if var_exists {
+					// join here
+				} else {
+					in_state.abstract_mem[lhs_ty.Name] = rhs_val
+				}
+			}
+		}
+	case *CFGCondNode:
+	}
+}
