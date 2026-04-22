@@ -101,7 +101,7 @@ func (graphcreator *CFGGraphCreator) create_cfg_cond_node(imp_ast imp.Expr, line
 func (graphcreator *CFGGraphCreator) create_cfg_edge(from_id NodeID, to_id NodeID, label string) {
 	if from_id > 0 && to_id > 0 {
 		escaped_label := strings.ReplaceAll(label, "\"", "#34;")
-		edge := CFGEdge{Id: CFGEdgeLocation{graphcreator.func_name, graphcreator.next_edge_id}, From_node_id: from_id, To_node_id: to_id, Label: escaped_label}
+		edge := CFGEdge{Id: CFGEdgeLocation{graphcreator.func_name, graphcreator.next_edge_id}, From_node_id: CFGNodeLocation{graphcreator.func_name, from_id}, To_node_id: CFGNodeLocation{graphcreator.func_name, to_id}, Label: escaped_label}
 		graphcreator.Cfg_graph.Edge_map_from[from_id] = &edge
 		graphcreator.Cfg_graph.Edge_map_to[to_id] = append(graphcreator.Cfg_graph.Edge_map_to[to_id], &edge)
 		graphcreator.next_edge_id++
@@ -110,7 +110,7 @@ func (graphcreator *CFGGraphCreator) create_cfg_edge(from_id NodeID, to_id NodeI
 
 func (graphcreator *CFGGraphCreator) create_cfg_cond_edge(from_id NodeID, to_true_id NodeID, to_false_id NodeID) {
 	if from_id > 0 && (to_true_id > 0 || to_false_id > 0) {
-		edge := CFGCondEdge{Id: CFGEdgeLocation{graphcreator.func_name, graphcreator.next_edge_id}, From_node_id: from_id, To_true_node_id: to_true_id, To_false_node_id: to_false_id}
+		edge := CFGCondEdge{Id: CFGEdgeLocation{graphcreator.func_name, graphcreator.next_edge_id}, From_node_id: CFGNodeLocation{graphcreator.func_name, from_id}, To_true_node_id: CFGNodeLocation{graphcreator.func_name, to_true_id}, To_false_node_id: CFGNodeLocation{graphcreator.func_name, to_false_id}}
 		graphcreator.Cfg_graph.Edge_map_from[from_id] = &edge
 		if to_true_id > 0 {
 			graphcreator.Cfg_graph.Edge_map_to[to_true_id] = append(graphcreator.Cfg_graph.Edge_map_to[to_true_id], &edge)
