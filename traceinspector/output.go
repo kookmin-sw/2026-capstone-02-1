@@ -19,7 +19,6 @@ type AnalyzerOutput struct {
 	Type          AnalyzerOutputType
 	Function_name imp.ImpFunctionName
 	Node_id       NodeID
-	Line_num      int
 	Msg           string
 }
 
@@ -39,16 +38,6 @@ func write_update_node(node_location CFGNodeLocation, label string) {
 	enc := json.NewEncoder(buf)
 	enc.SetEscapeHTML(false)
 	enc.Encode(res)
-	out := &bytes.Buffer{}
-	json.Compact(out, buf.Bytes())
-	fmt.Println(out.String())
-}
-
-func write_error_linenum(line_num int, msg string) {
-	buf := &bytes.Buffer{}
-	enc := json.NewEncoder(buf)
-	enc.SetEscapeHTML(false)
-	enc.Encode(AnalyzerOutput{Type: AnalyzerOutput_error, Line_num: line_num, Msg: msg})
 	out := &bytes.Buffer{}
 	json.Compact(out, buf.Bytes())
 	fmt.Println(out.String())
