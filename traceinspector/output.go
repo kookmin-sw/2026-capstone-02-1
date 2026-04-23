@@ -19,21 +19,22 @@ type AnalyzerOutput struct {
 	Type          AnalyzerOutputType
 	Function_name imp.ImpFunctionName
 	Node_id       NodeID
-	Msg           string
+	Node_data     string
+	Log           string
 }
 
 func write_error(node_location CFGNodeLocation, msg string) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
 	enc.SetEscapeHTML(false)
-	enc.Encode(AnalyzerOutput{Type: AnalyzerOutput_error, Function_name: node_location.Function_name, Node_id: node_location.Id, Msg: msg})
+	enc.Encode(AnalyzerOutput{Type: AnalyzerOutput_error, Function_name: node_location.Function_name, Node_id: node_location.Id, Log: msg})
 	out := &bytes.Buffer{}
 	json.Compact(out, buf.Bytes())
 	fmt.Println(out.String())
 }
 
 func write_update_node(node_location CFGNodeLocation, label string) {
-	res := AnalyzerOutput{Type: AnalyzerOutput_update_node, Function_name: node_location.Function_name, Node_id: node_location.Id, Msg: label}
+	res := AnalyzerOutput{Type: AnalyzerOutput_update_node, Function_name: node_location.Function_name, Node_id: node_location.Id, Log: label}
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
 	enc.SetEscapeHTML(false)
