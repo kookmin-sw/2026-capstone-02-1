@@ -27,4 +27,5 @@ type IntegerDomain[DomainImpl any] interface {
 	Leq(DomainImpl) BoolDomain
 	Geq(DomainImpl) BoolDomain
 	Neg() DomainImpl
+	Filter(FilterQuery, DomainImpl) DomainImpl
 }

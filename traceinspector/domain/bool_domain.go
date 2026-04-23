@@ -20,6 +20,10 @@ func (domain BoolDomain) String() string {
 	}
 }
 
+func (domain BoolDomain) IsTrue() bool {
+	return !domain.IsBot() && !domain.IsTop() && domain.val
+}
+
 func (domain BoolDomain) Clone() BoolDomain {
 	return BoolDomain{val: domain.val, is_bottom: domain.is_bottom, is_top: domain.is_top}
 }
