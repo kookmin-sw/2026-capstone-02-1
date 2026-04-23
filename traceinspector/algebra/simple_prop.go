@@ -21,10 +21,10 @@ type SimpleProp struct {
 type SimplePropType int
 
 const (
-	SimplePropType_Invalid = iota
-	SimplePropType_Eq      = iota
-	SimplePropType_Neq     = iota
-	SimplePropType_Leq     = iota
+	SimplePropType_Invalid SimplePropType = iota
+	SimplePropType_Eq
+	SimplePropType_Neq
+	SimplePropType_Leq
 )
 
 type SimplePropCoeff int
