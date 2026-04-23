@@ -143,12 +143,14 @@ func (interpreter *ImpFunctionInterpreter[IntDomainImpl, ArrayDomainImpl]) Step(
 
 	// When we receive a new pair, update the global state with its join
 	interpreter.abstract_mem.pre_mem[in_state.node_location.Id].Join_inplace(in_state.abstract_mem)
+	write_update_node(in_state.node_location, interpreter.abstract_mem.pre_mem[in_state.node_location.Id].String())
 
 	var return_states []AbstractState[IntDomainImpl, ArrayDomainImpl]
 	switch cfg_node := cfg_node.(type) {
 	case *CFGNode:
 		switch stmt := cfg_node.Ast.(type) {
 		case *imp.AssignStmt:
+			// assignment should overwrite the value, instead of join
 			rhs_val := interpreter.Eval_expr(in_state.node_location, stmt.Rhs, in_state.abstract_mem)
 			switch lhs_ty := stmt.Lhs.(type) {
 			case *imp.VarExpr:
@@ -158,23 +160,24 @@ func (interpreter *ImpFunctionInterpreter[IntDomainImpl, ArrayDomainImpl]) Step(
 						write_error(in_state.node_location, "LHS and RHS donain type does not match")
 						return nil
 					}
-					switch rhs_val.domain_kind {
-					case InvalidKind:
-						write_error(in_state.node_location, fmt.Sprintf("Got Invalid domain kind for RHS %s", stmt.Rhs))
-					case IntDomainKind:
-						in_state.abstract_mem[lhs_ty.Name] = AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind, int_domain: in_state.abstract_mem[lhs_ty.Name].Get_int().Join(rhs_val.Get_int())}
-					case BoolDomainKind:
-						in_state.abstract_mem[lhs_ty.Name] = AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind, bool_domain: in_state.abstract_mem[lhs_ty.Name].Get_bool().Join(rhs_val.Get_bool())}
-					case ArrayDomainKind:
-						in_state.abstract_mem[lhs_ty.Name] = AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: ArrayDomainKind, array_domain: in_state.abstract_mem[lhs_ty.Name].Get_array().Join(rhs_val.Get_array())}
-					}
+					in_state.abstract_mem[lhs_ty.Name] = rhs_val
+					// switch rhs_val.domain_kind {
+					// case InvalidKind:
+					// 	write_error(in_state.node_location, fmt.Sprintf("Got Invalid domain kind for RHS %s", stmt.Rhs))
+					// 	return nil
+					// case IntDomainKind:
+					// 	in_state.abstract_mem[lhs_ty.Name] = AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind, int_domain: in_state.abstract_mem[lhs_ty.Name].Get_int().Join(rhs_val.Get_int())}
+					// case BoolDomainKind:
+					// 	in_state.abstract_mem[lhs_ty.Name] = AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind, bool_domain: in_state.abstract_mem[lhs_ty.Name].Get_bool().Join(rhs_val.Get_bool())}
+					// case ArrayDomainKind:
+					// 	in_state.abstract_mem[lhs_ty.Name] = AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: ArrayDomainKind, array_domain: in_state.abstract_mem[lhs_ty.Name].Get_array().Join(rhs_val.Get_array())}
+					// }
 				} else {
 					in_state.abstract_mem[lhs_ty.Name] = rhs_val
 				}
 			}
 			switch outgoing_edge := interpreter.func_cfg_map[interpreter.func_name].Edge_map_from[in_state.node_location.Id].(type) {
 			case *CFGEdge:
-				fmt.Printf("adding outgoing edge %s to return state\n", outgoing_edge)
 				new_state := in_state.Clone()
 				return_states = append(return_states, AbstractState[IntDomainImpl, ArrayDomainImpl]{node_location: outgoing_edge.To_node_id, abstract_mem: new_state.abstract_mem})
 			}

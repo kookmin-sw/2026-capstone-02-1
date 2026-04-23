@@ -1,7 +1,6 @@
 package traceinspector
 
 import (
-	"fmt"
 	"traceinspector/domain"
 	"traceinspector/imp"
 )
@@ -26,12 +25,12 @@ func (analyzer *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Start_analysis
 	for len(worklist) > 0 {
 		front_val := worklist[0]
 		worklist = worklist[1:]
-		fmt.Println("Process state", front_val)
+		// fmt.Println("Process state", front_val)
 		for _, val := range semantics.Step(front_val) {
 			worklist = append(worklist, val)
 		}
 	}
-	fmt.Println("Final mem", analyzer.function_pre_mem_map[function_name])
+	// fmt.Println("Final mem", analyzer.function_pre_mem_map[function_name])
 }
 
 func Test(func_cfg_map FunctionCFGMap, func_name imp.ImpFunctionName, func_info_map imp.ImpFunctionMap) {

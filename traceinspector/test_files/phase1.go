@@ -8,5 +8,4 @@ func main() {
 	c := a + b
 	a = 5
 	d = 1
-
 }

@@ -60,9 +60,9 @@ func (node *CFGNode) is_CFGNodeClass() {}
 func (node *CFGNode) To_mermaid() string {
 	switch node.Node_type {
 	case node_basic:
-		return fmt.Sprintf("%d[\"`%s`\"]", node.Id.Id, node.Code)
+		return fmt.Sprintf("%d[\"`%s`\"]", node.Id.Id, escape_string_mermaid(node.Code))
 	case node_cond:
-		return fmt.Sprintf("%d{\"`%s`\"}", node.Id.Id, node.Code)
+		return fmt.Sprintf("%d{\"`%s`\"}", node.Id.Id, escape_string_mermaid(node.Code))
 	}
 	return ""
 }
@@ -72,9 +72,9 @@ func (node *CFGCondNode) is_CFGNodeClass() {}
 func (node *CFGCondNode) To_mermaid() string {
 	switch node.Node_type {
 	case node_basic:
-		return fmt.Sprintf("%d[\"`%s`\"]", node.Id.Id, node.Code)
+		return fmt.Sprintf("%d[\"`%s`\"]", node.Id.Id, escape_string_mermaid(node.Code))
 	case node_cond:
-		return fmt.Sprintf("%d{\"`%s`\"}", node.Id.Id, node.Code)
+		return fmt.Sprintf("%d{\"`%s`\"}", node.Id.Id, escape_string_mermaid(node.Code))
 	}
 	return ""
 }
@@ -194,4 +194,10 @@ func (m CFGGraph) To_mermaid() string {
 		out.WriteString(edge.To_mermaid() + "\n")
 	}
 	return out.String()
+}
+
+func escape_string_mermaid(input string) string {
+	input = strings.ReplaceAll(input, "`", "#96;")
+	input = strings.ReplaceAll(input, "\"", "#34;")
+	return input
 }

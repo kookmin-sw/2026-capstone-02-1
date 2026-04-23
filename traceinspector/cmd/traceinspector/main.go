@@ -66,6 +66,7 @@ func main() {
 			fmt.Println("----------------")
 			traceinspector.Print_mermaid(fun_cfg)
 		}
+		return
 	}
 
 	if just_print_imp {
