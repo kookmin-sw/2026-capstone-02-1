@@ -21,12 +21,25 @@ func (domain IntervalDomain) String() string {
 	}
 }
 
+// Check if the domain is valid, and if upper < lower, change to bot
+func (domain IntervalDomain) CheckValid() IntervalDomain {
+	// upper <= lower - 1
+	if !domain.is_bottom && domain.upper.Leq(domain.lower.Sub(algebra.ExtInt_Finite(1))) {
+		return IntervalBot()
+	}
+	return domain
+}
+
 func (domain IntervalDomain) Clone() IntervalDomain {
 	return IntervalDomain{lower: domain.lower, upper: domain.upper, is_bottom: domain.is_bottom}
 }
 
 func IntervalBot() IntervalDomain {
 	return IntervalDomain{is_bottom: true}
+}
+
+func IntervalTop() IntervalDomain {
+	return IntervalDomain{lower: algebra.ExtInt_NegInfty(), upper: algebra.ExtInt_Infty()}
 }
 
 func (domain IntervalDomain) IsBot() bool {
@@ -38,15 +51,27 @@ func (domain IntervalDomain) IsTop() bool {
 }
 
 func (domain IntervalDomain) Is_bounded() bool {
-	return domain.lower.IsFinite() && domain.upper.IsFinite()
+	return !domain.IsBot() && domain.lower.IsFinite() && domain.upper.IsFinite()
 }
 
 func (lhs IntervalDomain) Join(rhs IntervalDomain) IntervalDomain {
+	if lhs.is_bottom {
+		return rhs
+	}
+	if rhs.is_bottom {
+		return lhs
+	}
 	return IntervalDomain{lower: lhs.lower.Min(rhs.lower), upper: lhs.upper.Max(rhs.upper)}
 }
 
 // `lhs ⊑ rhs` = lhs.lower >= rhs.lower && lhs.upper <= rhs.upper
 func (lhs IntervalDomain) Incl(rhs IntervalDomain) bool {
+	if lhs.IsBot() {
+		return true
+	}
+	if rhs.IsBot() {
+		return lhs.IsBot()
+	}
 	return rhs.lower.Leq(lhs.lower) && lhs.upper.Leq(rhs.upper)
 }
 
@@ -99,6 +124,9 @@ func (lhs IntervalDomain) Sub(rhs IntervalDomain) IntervalDomain {
 
 func (lhs IntervalDomain) Mul(rhs IntervalDomain) IntervalDomain {
 	// [x1, x2] * [y1, y2] = [min(x1y1, x1y2, x2y1, x2y2) , max(x1y1, x1y2, x2y1, x2y2)]
+	if lhs.is_bottom || rhs.is_bottom {
+		return IntervalBot()
+	}
 	x1y1 := lhs.lower.Mul(rhs.lower)
 	x1y2 := lhs.lower.Mul(rhs.upper)
 	x2y1 := lhs.upper.Mul(rhs.lower)
@@ -107,37 +135,136 @@ func (lhs IntervalDomain) Mul(rhs IntervalDomain) IntervalDomain {
 }
 
 func (lhs IntervalDomain) Div(rhs IntervalDomain) IntervalDomain {
+	if lhs.is_bottom || rhs.is_bottom {
+		return IntervalBot()
+	}
 	return IntervalDomain{lower: algebra.ExtInt_NegInfty(), upper: algebra.ExtInt_Infty()}
 }
 
 func (lhs IntervalDomain) Mod(rhs IntervalDomain) IntervalDomain {
+	if lhs.is_bottom || rhs.is_bottom {
+		return IntervalBot()
+	}
 	return IntervalDomain{lower: algebra.ExtInt_NegInfty(), upper: algebra.ExtInt_Infty()}
 }
 
 func (lhs IntervalDomain) Neg() IntervalDomain {
-	return IntervalDomain{lower: algebra.ExtInt_NegInfty(), upper: algebra.ExtInt_Infty()}
+	if lhs.is_bottom {
+		return IntervalBot()
+	}
+	return IntervalDomain{lower: lhs.upper.Neg(), upper: lhs.lower.Neg()}
+}
+
+// Returns whether the two domains are disjoint(do they not overlap?)
+func (lhs IntervalDomain) Disjoint(rhs IntervalDomain) bool {
+	// [--------]           [-------]
+	//            [------]
+	if lhs.is_bottom || rhs.is_bottom {
+		return true
+	}
+	return lhs.upper.Leq(rhs.lower.Sub(algebra.ExtInt_Finite(1))) || rhs.upper.Leq(lhs.lower.Add(algebra.ExtInt_Finite(1)))
 }
 
 func (lhs IntervalDomain) Eq(rhs IntervalDomain) BoolDomain {
-	return BoolDomain{val: true}
+	if lhs.IsBot() || rhs.IsBot() {
+		return BoolDomain{is_bottom: true}
+	}
+	if lhs.Disjoint(rhs) {
+		return BoolDomain{val: false}
+	}
+	// [x, x] = [x, x]
+	if lhs.lower.IsFinite() && rhs.lower.IsFinite() && lhs.upper.IsFinite() && rhs.upper.IsFinite() && lhs.lower.Eq(lhs.upper) && lhs.lower.Eq(rhs.lower) && lhs.upper.Eq(rhs.upper) {
+		return BoolDomain{val: false}
+	}
+	// sound
+	return BoolDomain{is_top: true}
 }
 
 func (lhs IntervalDomain) Neq(rhs IntervalDomain) BoolDomain {
-	return BoolDomain{val: true}
+	if lhs.IsBot() || rhs.IsBot() {
+		return BoolDomain{is_bottom: true}
+	}
+	if lhs.Disjoint(rhs) {
+		return BoolDomain{val: true}
+	}
+	// [x, x] == [x, x] <-> !([x, x] == [x, x]) = false
+	if lhs.lower.IsFinite() && rhs.lower.IsFinite() && lhs.upper.IsFinite() && rhs.upper.IsFinite() && lhs.lower.Eq(lhs.upper) && lhs.lower.Eq(rhs.lower) && lhs.upper.Eq(rhs.upper) {
+		return BoolDomain{val: false}
+	}
+	return BoolDomain{is_top: true}
 }
 
 func (lhs IntervalDomain) Geq(rhs IntervalDomain) BoolDomain {
-	return BoolDomain{val: true}
+	if lhs.IsBot() || rhs.IsBot() {
+		return BoolDomain{is_bottom: true}
+	}
+	if !lhs.Disjoint(rhs) {
+		return BoolDomain{is_top: true}
+	}
+	// [x, y] >= [a, b] <-> b <= x /\ b, x are finite
+	if lhs.lower.IsFinite() && rhs.upper.IsFinite() && rhs.upper.Leq(lhs.lower) {
+		return BoolDomain{val: true}
+	}
+	return BoolDomain{is_top: true}
 }
 
 func (lhs IntervalDomain) Greaterthan(rhs IntervalDomain) BoolDomain {
-	return BoolDomain{val: true}
+	if lhs.IsBot() || rhs.IsBot() {
+		return BoolDomain{is_bottom: true}
+	}
+	if !lhs.Disjoint(rhs) {
+		return BoolDomain{is_top: true}
+	}
+	// [x, y] > [a, b] <-> b <= x - 1 /\ b,x are finite
+	if lhs.lower.IsFinite() && rhs.upper.IsFinite() && rhs.upper.Leq(lhs.lower.Sub(algebra.ExtInt_Finite(1))) {
+		return BoolDomain{val: true}
+	}
+	return BoolDomain{is_top: true}
 }
 
 func (lhs IntervalDomain) Leq(rhs IntervalDomain) BoolDomain {
-	return BoolDomain{val: true}
+	if lhs.IsBot() || rhs.IsBot() {
+		return BoolDomain{is_bottom: true}
+	}
+	if !lhs.Disjoint(rhs) {
+		return BoolDomain{is_top: true}
+	}
+	// [x, y] <= [a, b] <-> y <= a /\ y, a are finite
+	if lhs.upper.IsFinite() && rhs.lower.IsFinite() && lhs.upper.Leq(rhs.lower) {
+		return BoolDomain{val: true}
+	}
+	return BoolDomain{is_top: true}
 }
 
 func (lhs IntervalDomain) Lessthan(rhs IntervalDomain) BoolDomain {
-	return BoolDomain{val: true}
+	if lhs.IsBot() || rhs.IsBot() {
+		return BoolDomain{is_bottom: true}
+	}
+	if !lhs.Disjoint(rhs) {
+		return BoolDomain{is_top: true}
+	}
+	// [x, y] < [a, b] <-> y <= a - 1 /\ y, a are finite
+	if lhs.upper.IsFinite() && rhs.lower.IsFinite() && lhs.upper.Leq(rhs.lower.Sub(algebra.ExtInt_Finite(1))) {
+		return BoolDomain{val: true}
+	}
+	return BoolDomain{is_top: true}
+}
+
+func (lhs IntervalDomain) Filter(filter_type FilterQuery, rhs IntervalDomain) IntervalDomain {
+	switch filter_type {
+	case FilterQuery_Eq:
+		if rhs.Incl(lhs) {
+			return rhs
+		} else {
+			return IntervalBot()
+		}
+	case FilterQuery_Neq:
+		// imprecise?
+		return IntervalTop()
+	case FilterQuery_Leq:
+		lhs.upper = lhs.upper.Min(rhs.lower)
+	case FilterQuery_Geq:
+		lhs.lower = lhs.lower.Max(rhs.upper)
+	}
+	return lhs.CheckValid()
 }
