@@ -258,7 +258,7 @@ func (nh *Go2ImpTranslator) translate_ExprStmt(stmt *ast.ExprStmt) []Stmt {
 	switch func_ident.Name {
 	case "Scanf":
 		return []Stmt{create_scanf()}
-	case "Printf":
+	case "Print":
 		return []Stmt{&PrintStmt{Node: nh.create_node_struct_from_ast(stmt), Args: translated_args}}
 	default:
 		return []Stmt{&CallStmt{Node: nh.create_node_struct_from_ast(stmt), Func_name: ImpFunctionName(func_ident.Name), Args: translated_args}}
