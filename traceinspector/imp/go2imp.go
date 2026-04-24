@@ -297,9 +297,11 @@ func (nh *Go2ImpTranslator) translate_IfStmt(stmt *ast.IfStmt) []Stmt {
 func (nh *Go2ImpTranslator) translate_IncDecStmt(stmt *ast.IncDecStmt) []Stmt {
 	switch stmt.Tok {
 	case token.INC:
-		return []Stmt{&IncStmt{Node: nh.create_node_struct_from_ast(stmt), Subexpr: nh.Translate_Expr(stmt.X)}}
+		// return []Stmt{&IncStmt{Node: nh.create_node_struct_from_ast(stmt), Subexpr: nh.Translate_Expr(stmt.X)}}
+		return []Stmt{&AssignStmt{Node: nh.create_node_struct_from_ast(stmt), Lhs: nh.Translate_Expr(stmt.X), Rhs: &AddExpr{Node: nh.create_node_struct_from_ast(stmt.X), Lhs: nh.Translate_Expr(stmt.X), Rhs: &IntLitExpr{Node: nh.create_node_struct_from_ast(stmt.X), Value: 1}}}}
 	case token.DEC:
-		return []Stmt{&DecStmt{Node: nh.create_node_struct_from_ast(stmt), Subexpr: nh.Translate_Expr(stmt.X)}}
+		// return []Stmt{&DecStmt{Node: nh.create_node_struct_from_ast(stmt), Subexpr: nh.Translate_Expr(stmt.X)}}
+		return []Stmt{&AssignStmt{Node: nh.create_node_struct_from_ast(stmt), Lhs: nh.Translate_Expr(stmt.X), Rhs: &SubExpr{Node: nh.create_node_struct_from_ast(stmt.X), Lhs: nh.Translate_Expr(stmt.X), Rhs: &IntLitExpr{Node: nh.create_node_struct_from_ast(stmt.X), Value: 1}}}}
 	default:
 		panic(fmt.Sprintf("go2imp: Unsupported IncDecStmt token '%s'\n", stmt.Tok))
 	}
