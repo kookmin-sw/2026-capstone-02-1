@@ -64,6 +64,13 @@ func (lhs IntervalDomain) Join(rhs IntervalDomain) (IntervalDomain, bool) {
 	return IntervalDomain{lower: lhs.lower.Min(rhs.lower), upper: lhs.upper.Max(rhs.upper)}, !(lhs.lower.Eq(lhs.lower.Min(rhs.lower)) && lhs.upper.Eq(lhs.upper.Max(rhs.upper)))
 }
 
+func (lhs IntervalDomain) Intersection(rhs IntervalDomain) IntervalDomain {
+	if lhs.Disjoint(rhs) {
+		return IntervalBot()
+	}
+	return IntervalDomain{lower: lhs.lower.Max(rhs.lower), upper: lhs.upper.Min(rhs.upper)}.CheckValid()
+}
+
 // `lhs ⊑ rhs` = lhs.lower >= rhs.lower && lhs.upper <= rhs.upper
 func (lhs IntervalDomain) Incl(rhs IntervalDomain) bool {
 	if lhs.IsBot() {
@@ -253,20 +260,16 @@ func (lhs IntervalDomain) Lessthan(rhs IntervalDomain) BoolDomain {
 func (lhs IntervalDomain) Filter(filter_type FilterQueryType, rhs IntervalDomain) IntervalDomain {
 	switch filter_type {
 	case FilterQueryType_Eq:
-		if rhs.Incl(lhs) {
-			return rhs
-		} else {
-			return IntervalBot()
-		}
+		return lhs.Intersection(rhs)
 	case FilterQueryType_Neq:
 		// imprecise?
-		return IntervalTop()
+		return lhs
 	case FilterQueryType_Leq:
 		// fmt.Println("Leq filter interval lhs:", lhs, "rhs:", rhs)
-		lhs.upper = lhs.upper.Min(rhs.lower)
+		lhs.upper = lhs.upper.Min(rhs.upper)
 	case FilterQueryType_Geq:
 		// fmt.Println("Geq filter interval lhs:", lhs, "rhs:", rhs)
-		lhs.lower = lhs.lower.Max(rhs.upper)
+		lhs.lower = lhs.lower.Max(rhs.lower)
 	}
 	return lhs.CheckValid()
 }
