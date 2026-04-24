@@ -24,7 +24,20 @@ type ImpFunctionName string
 type ImpFunctionMap map[ImpFunctionName]ImpFunction
 
 type Go2ImpTranslator struct {
-	Fset *token.FileSet
+	Fset           *token.FileSet
+	for_post_stmts [][]Stmt // stack of post stmts, in case of nested loop
+}
+
+func (nh *Go2ImpTranslator) get_top_post_stmt() []Stmt {
+	return nh.for_post_stmts[len(nh.for_post_stmts)-1]
+}
+
+func (nh *Go2ImpTranslator) push_post_stmt(stmts []Stmt) {
+	nh.for_post_stmts = append(nh.for_post_stmts, stmts)
+}
+
+func (nh *Go2ImpTranslator) pop_post_stmt() {
+	nh.for_post_stmts = nh.for_post_stmts[:len(nh.for_post_stmts)-1]
 }
 
 func (nh *Go2ImpTranslator) translate_ast_node_as_ImpType(ast_node ast.Node) ImpTypes {
@@ -258,10 +271,17 @@ func (nh *Go2ImpTranslator) translate_ForStmt(stmt *ast.ForStmt) []Stmt {
 		init_stmts = nh.Translate_Stmt(stmt.Init)
 	}
 	cond_expr := nh.Translate_Expr(stmt.Cond)
+	if stmt.Post != nil {
+		nh.push_post_stmt(nh.Translate_Stmt(stmt.Post))
+	} else {
+		nh.push_post_stmt(nil)
+	}
+
 	body_stmt := nh.Translate_Stmt(stmt.Body)
 	if stmt.Post != nil {
-		body_stmt = slices.Concat(body_stmt, nh.Translate_Stmt(stmt.Post))
+		body_stmt = slices.Concat(body_stmt, nh.get_top_post_stmt())
 	}
+	nh.pop_post_stmt()
 	return append(init_stmts, &WhileStmt{Node: nh.create_node_struct_from_ast(stmt), Cond: cond_expr, Body_stmt: body_stmt})
 }
 
@@ -297,7 +317,12 @@ func (nh *Go2ImpTranslator) translate_BranchStmt(stmt *ast.BranchStmt) []Stmt {
 	case token.BREAK:
 		return []Stmt{&BreakStmt{Node: nh.create_node_struct_from_ast(stmt)}}
 	case token.CONTINUE:
-		return []Stmt{&ContinueStmt{Node: nh.create_node_struct_from_ast(stmt)}}
+		if len(nh.get_top_post_stmt()) > 0 {
+			// make sure post stmt is added
+			return append(nh.get_top_post_stmt(), &ContinueStmt{Node: nh.create_node_struct_from_ast(stmt)})
+		} else {
+			return []Stmt{&ContinueStmt{Node: nh.create_node_struct_from_ast(stmt)}}
+		}
 	default:
 		panic(fmt.Sprintf("go2imp: Unsupported BranchStmt token %s\n", stmt.Tok))
 	}
