@@ -14,8 +14,8 @@ func main() {
 	arr_len := len(arr)
 	for i < arr_len {
 		key := arr[i]
-		j := i - 1 // correct
-		// j := i + 1 // index error
+		// j := i - 1 // correct
+		j := i // index error
 
 		for j >= 0 {
 			cur := arr[j]

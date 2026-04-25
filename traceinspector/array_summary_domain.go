@@ -115,10 +115,12 @@ func (arr ArraySummaryDomain[IntDomainImpl]) Make_array(len_dom IntDomainImpl, d
 }
 
 func (arr ArraySummaryDomain[IntDomainImpl]) SetVal(index IntDomainImpl, val AbstractValue[IntDomainImpl, ArraySummaryDomain[IntDomainImpl]]) ArraySummaryDomain[IntDomainImpl] {
+
 	new_val, _ := arr.val.Join(val.Get_int())
-	if index.Incl(arr.length) {
-		return ArraySummaryDomain[IntDomainImpl]{length: arr.length, val: new_val}
-	} else {
+	if !index.Leq(arr.Len().Sub(index.From_IntLitExpr(imp.IntLitExpr{Value: 1}))).IsTrue() {
+		// potentially unsafe indexing
 		return ArraySummaryDomain[IntDomainImpl]{val: new_val.CreateBot(), length: arr.length}
+	} else {
+		return ArraySummaryDomain[IntDomainImpl]{length: arr.length, val: new_val}
 	}
 }
