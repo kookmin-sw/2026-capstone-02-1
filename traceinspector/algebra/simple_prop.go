@@ -217,3 +217,26 @@ func (sp SimpleProp) Negate() SimpleProp {
 	}
 	return sp
 }
+
+// Force the X_coeff to be non-negative, adjusting the signs of other terms and the prop type
+// e.g) -x + y <= 3 -> x - y >= -3
+func (sp SimpleProp) Set_xcoeff_positive() SimpleProp {
+	switch sp.X_coeff {
+	case SimplePropCoeff_zero, SimplePropCoeff_positive:
+		return sp
+	}
+	//x_coeff is negative
+	switch sp.Prop_type {
+	case SimplePropType_Invalid:
+		return sp
+	case SimplePropType_Eq:
+		return SimpleProp{
+			Prop_type: SimplePropType_Eq,
+			X_expr:    sp.X_expr,
+			X_coeff:   sp.X_coeff.Negate(),
+			Y_expr:    sp.Y_expr,
+			Y_coeff:   sp.Y_coeff.Negate(),
+			Constant:  -sp.Constant,
+		}
+	}
+}
