@@ -10,14 +10,17 @@ import (
 
 type AnalysisSettings struct {
 	Loop_iters_before_widening int // number of loop interations before widening
+	Max_call_stack_depth       int // number of nested function calls before returning top
 }
 
 // An AbstractState is the pair (l, M^#) ↪ (l', M^#') used in the abstract transition relation
 // node_location: node location to be interpreted
 // abstract_mem: the input abstract memory state wrt the node should be interpreted
+// remaining_call_depth: the number of nested function calls allowed before widening to top
 type AbstractState[IntDomainImpl domain.IntegerDomain[IntDomainImpl], ArrayDomainImpl ArrayDomain[IntDomainImpl, ArrayDomainImpl]] struct {
-	node_location CFGNodeLocation
-	abstract_mem  AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]
+	node_location        CFGNodeLocation
+	abstract_mem         AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]
+	remaining_call_depth int
 }
 
 func (state AbstractState[IntDomainImpl, ArrayDomainImpl]) String() string {
@@ -39,10 +42,10 @@ func (state AbstractState[IntDomainImpl, ArrayDomainImpl]) Clone() AbstractState
 
 // TODO: fix this part and integrate with get_abstract_value_from_expr
 // Compute the abstract value of an expression expr under an abstract memory state abs_mem
-func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Eval_expr(node_location CFGNodeLocation, expr imp.Expr, abs_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]) AbstractValue[IntDomainImpl, ArrayDomainImpl] {
+func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Eval_expr(abs_state AbstractState[IntDomainImpl, ArrayDomainImpl], expr imp.Expr) AbstractValue[IntDomainImpl, ArrayDomainImpl] {
 	switch expr_ty := expr.(type) {
 	case *imp.VarExpr:
-		return abs_mem[expr_ty.Name]
+		return abs_state.abstract_mem[expr_ty.Name]
 	case *imp.IntLitExpr:
 		intdom_result := interpreter.Intdomain_default.From_IntLitExpr(*expr_ty)
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind, int_domain: intdom_result}
@@ -53,142 +56,155 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Eval_expr(n
 		// TODO do something about strings
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{}
 	case *imp.NegExpr:
-		subexpr_val := interpreter.Eval_expr(node_location, expr_ty.Subexpr, abs_mem)
+		subexpr_val := interpreter.Eval_expr(abs_state, expr_ty.Subexpr)
 		if subexpr_val.domain_kind != IntDomainKind {
-			write_error(node_location, fmt.Sprintf("Result of arithmetic negation returned %s instead if IntDomain", subexpr_val.domain_kind))
+			write_error(abs_state.node_location, fmt.Sprintf("Result of arithmetic negation returned %s instead if IntDomain", subexpr_val.domain_kind))
 		}
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind, int_domain: subexpr_val.Get_int().Neg()}
 	case *imp.AddExpr:
-		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
-		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		lhs_val := interpreter.Eval_expr(abs_state, expr_ty.Lhs)
+		rhs_val := interpreter.Eval_expr(abs_state, expr_ty.Rhs)
 		if !(lhs_val.domain_kind == IntDomainKind && rhs_val.domain_kind == IntDomainKind) {
-			write_error(node_location, "Add expected LHS and RHS to be integer domain values, but are not")
+			write_error(abs_state.node_location, "Add expected LHS and RHS to be integer domain values, but are not")
 		}
 		result_intdom := lhs_val.Get_int().Add(rhs_val.Get_int())
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind, int_domain: result_intdom}
 	case *imp.SubExpr:
-		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
-		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		lhs_val := interpreter.Eval_expr(abs_state, expr_ty.Lhs)
+		rhs_val := interpreter.Eval_expr(abs_state, expr_ty.Rhs)
 		if !(lhs_val.domain_kind == IntDomainKind && rhs_val.domain_kind == IntDomainKind) {
-			write_error(node_location, "Sub expected LHS and RHS to be integer domain values, but are not")
+			write_error(abs_state.node_location, "Sub expected LHS and RHS to be integer domain values, but are not")
 		}
 		result_intdom := lhs_val.Get_int().Sub(rhs_val.Get_int())
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind, int_domain: result_intdom}
 	case *imp.MulExpr:
-		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
-		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		lhs_val := interpreter.Eval_expr(abs_state, expr_ty.Lhs)
+		rhs_val := interpreter.Eval_expr(abs_state, expr_ty.Rhs)
 		if !(lhs_val.domain_kind == IntDomainKind && rhs_val.domain_kind == IntDomainKind) {
-			write_error(node_location, "Mul expected LHS and RHS to be integer domain values, but are not")
+			write_error(abs_state.node_location, "Mul expected LHS and RHS to be integer domain values, but are not")
 		}
 		result_intdom := lhs_val.Get_int().Mul(rhs_val.Get_int())
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind, int_domain: result_intdom}
 	case *imp.DivExpr:
-		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
-		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		lhs_val := interpreter.Eval_expr(abs_state, expr_ty.Lhs)
+		rhs_val := interpreter.Eval_expr(abs_state, expr_ty.Rhs)
 		if !(lhs_val.domain_kind == IntDomainKind && rhs_val.domain_kind == IntDomainKind) {
-			write_error(node_location, "Div expected LHS and RHS to be integer domain values, but are not")
+			write_error(abs_state.node_location, "Div expected LHS and RHS to be integer domain values, but are not")
 		}
 		result_intdom := lhs_val.Get_int().Div(rhs_val.Get_int())
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind, int_domain: result_intdom}
 	case *imp.ModExpr:
-		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
-		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		lhs_val := interpreter.Eval_expr(abs_state, expr_ty.Lhs)
+		rhs_val := interpreter.Eval_expr(abs_state, expr_ty.Rhs)
 		if !(lhs_val.domain_kind == IntDomainKind && rhs_val.domain_kind == IntDomainKind) {
-			write_error(node_location, "Add expected LHS and RHS to be integer domain values, but are not")
+			write_error(abs_state.node_location, "Add expected LHS and RHS to be integer domain values, but are not")
 		}
 		result_intdom := lhs_val.Get_int().Mod(rhs_val.Get_int())
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind, int_domain: result_intdom}
 	case *imp.ParenExpr:
-		return interpreter.Eval_expr(node_location, expr_ty.Subexpr, abs_mem)
+		return interpreter.Eval_expr(abs_state, expr_ty.Subexpr)
 	case *imp.ArrayIndexExpr:
-		arr_val := interpreter.Eval_expr(node_location, expr_ty.Base, abs_mem)
-		index_val := interpreter.Eval_expr(node_location, expr_ty.Index, abs_mem)
+		arr_val := interpreter.Eval_expr(abs_state, expr_ty.Base)
+		index_val := interpreter.Eval_expr(abs_state, expr_ty.Index)
 		if arr_val.domain_kind != ArrayDomainKind {
-			write_error(node_location, fmt.Sprintf("'%s' : expected arr to have arr domain type", expr_ty))
+			write_error(abs_state.node_location, fmt.Sprintf("'%s' : expected arr to have arr domain type", expr_ty))
 		}
 		if !index_val.Get_int().Leq(arr_val.Get_array().Len().Sub(index_val.int_domain.From_IntLitExpr(imp.IntLitExpr{Value: 1}))).IsTrue() {
-			write_warning(node_location, fmt.Sprintf("Potentially unsafe array indexing: index has value %s, but %s.Len has value %s.", index_val.Get_int(), get_varname_from_lvalue(expr_ty.Base), arr_val.Get_array().Len()))
+			write_warning(abs_state.node_location, fmt.Sprintf("Potentially unsafe array indexing: index has value %s, but %s.Len has value %s.", index_val.Get_int(), get_varname_from_lvalue(expr_ty.Base), arr_val.Get_array().Len()))
 		}
 		result_val := arr_val.Get_array().GetIndex(index_val.Get_int())
 		return result_val
 	case *imp.LenExpr:
-		arr_val := interpreter.Eval_expr(node_location, expr_ty.Subexpr, abs_mem)
+		arr_val := interpreter.Eval_expr(abs_state, expr_ty.Subexpr)
 		if arr_val.domain_kind != ArrayDomainKind {
-			write_error(node_location, fmt.Sprintf("'%s' : expected arr to have arr domain type", expr_ty))
+			write_error(abs_state.node_location, fmt.Sprintf("'%s' : expected arr to have arr domain type", expr_ty))
 		}
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind, int_domain: arr_val.Get_array().Len()}
 	case *imp.MakeArrayExpr:
-		default_val := interpreter.Eval_expr(node_location, expr_ty.Value, abs_mem)
-		size_val := interpreter.Eval_expr(node_location, expr_ty.Size, abs_mem)
+		default_val := interpreter.Eval_expr(abs_state, expr_ty.Value)
+		size_val := interpreter.Eval_expr(abs_state, expr_ty.Size)
 		if size_val.domain_kind != IntDomainKind {
-			write_error(node_location, fmt.Sprintf("Size argument '%s' in make_array expected to have int domain type, but has type %s", expr_ty.Size, size_val.domain_kind))
+			write_error(abs_state.node_location, fmt.Sprintf("Size argument '%s' in make_array expected to have int domain type, but has type %s", expr_ty.Size, size_val.domain_kind))
 		}
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: ArrayDomainKind, array_domain: interpreter.Arraydomain_default.Make_array(size_val.Get_int(), default_val)}
 	case *imp.EqExpr:
-		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
-		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		lhs_val := interpreter.Eval_expr(abs_state, expr_ty.Lhs)
+		rhs_val := interpreter.Eval_expr(abs_state, expr_ty.Rhs)
 		if lhs_val.domain_kind != rhs_val.domain_kind {
-			write_error(node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different", expr_ty))
+			write_error(abs_state.node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different", expr_ty))
 		}
 		result_val := lhs_val.Get_int().Eq(rhs_val.Get_int())
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind, bool_domain: result_val}
 	case *imp.NeqExpr:
-		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
-		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		lhs_val := interpreter.Eval_expr(abs_state, expr_ty.Lhs)
+		rhs_val := interpreter.Eval_expr(abs_state, expr_ty.Rhs)
 		if lhs_val.domain_kind != rhs_val.domain_kind {
-			write_error(node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different", expr_ty))
+			write_error(abs_state.node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different", expr_ty))
 		}
 		result_val := lhs_val.Get_int().Neq(rhs_val.Get_int())
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind, bool_domain: result_val}
 	case *imp.LeqExpr:
-		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
-		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		lhs_val := interpreter.Eval_expr(abs_state, expr_ty.Lhs)
+		rhs_val := interpreter.Eval_expr(abs_state, expr_ty.Rhs)
 		if !(lhs_val.domain_kind == IntDomainKind && lhs_val.domain_kind == rhs_val.domain_kind) {
-			write_error(node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different (%s vs %s)", expr_ty, lhs_val.domain_kind, rhs_val.domain_kind))
+			write_error(abs_state.node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different (%s vs %s)", expr_ty, lhs_val.domain_kind, rhs_val.domain_kind))
 		}
 		result_val := lhs_val.Get_int().Leq(rhs_val.Get_int())
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind, bool_domain: result_val}
 	case *imp.GeqExpr:
-		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
-		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		lhs_val := interpreter.Eval_expr(abs_state, expr_ty.Lhs)
+		rhs_val := interpreter.Eval_expr(abs_state, expr_ty.Rhs)
 		if !(lhs_val.domain_kind == IntDomainKind && lhs_val.domain_kind == rhs_val.domain_kind) {
-			write_error(node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different (%s vs %s)", expr_ty, lhs_val.domain_kind, rhs_val.domain_kind))
+			write_error(abs_state.node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different (%s vs %s)", expr_ty, lhs_val.domain_kind, rhs_val.domain_kind))
 		}
 		result_val := lhs_val.Get_int().Geq(rhs_val.Get_int())
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind, bool_domain: result_val}
 	case *imp.LessthanExpr:
-		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
-		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		lhs_val := interpreter.Eval_expr(abs_state, expr_ty.Lhs)
+		rhs_val := interpreter.Eval_expr(abs_state, expr_ty.Rhs)
 		if !(lhs_val.domain_kind == IntDomainKind && lhs_val.domain_kind == rhs_val.domain_kind) {
-			write_error(node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different (%s vs %s)", expr_ty, lhs_val.domain_kind, rhs_val.domain_kind))
+			write_error(abs_state.node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different (%s vs %s)", expr_ty, lhs_val.domain_kind, rhs_val.domain_kind))
 		}
 		result_val := lhs_val.Get_int().Lessthan(rhs_val.Get_int())
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind, bool_domain: result_val}
 	case *imp.GreaterthanExpr:
-		lhs_val := interpreter.Eval_expr(node_location, expr_ty.Lhs, abs_mem)
-		rhs_val := interpreter.Eval_expr(node_location, expr_ty.Rhs, abs_mem)
+		lhs_val := interpreter.Eval_expr(abs_state, expr_ty.Lhs)
+		rhs_val := interpreter.Eval_expr(abs_state, expr_ty.Rhs)
 		if !(lhs_val.domain_kind == IntDomainKind && lhs_val.domain_kind == rhs_val.domain_kind) {
-			write_error(node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different (%s vs %s)", expr_ty, lhs_val.domain_kind, rhs_val.domain_kind))
+			write_error(abs_state.node_location, fmt.Sprintf("'%s' : types of LHS and RHS are different (%s vs %s)", expr_ty, lhs_val.domain_kind, rhs_val.domain_kind))
 		}
 		result_val := lhs_val.Get_int().Greaterthan(rhs_val.Get_int())
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind, bool_domain: result_val}
 	case *imp.CallExpr:
 		func_info, func_exists := interpreter.Function_defs[expr_ty.Func_name]
 		if !(func_exists) {
-			write_error(node_location, fmt.Sprintf("Function %s does not exist", expr_ty.Func_name))
+			write_error(abs_state.node_location, fmt.Sprintf("Function %s does not exist", expr_ty.Func_name))
 			panic("unreachable")
 		}
 		if len(func_info.Arg_pairs) != len(expr_ty.Args) {
-			write_error(node_location, fmt.Sprintf("Function %s expectes %d arguments, but got %d", expr_ty.Func_name, len(func_info.Arg_pairs), len(expr_ty.Args)))
+			write_error(abs_state.node_location, fmt.Sprintf("Function %s expectes %d arguments, but got %d", expr_ty.Func_name, len(func_info.Arg_pairs), len(expr_ty.Args)))
 			panic("unreachable")
 		}
 		function_entry_varmem := make(AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl])
 		for arg_index, arg_info := range func_info.Arg_pairs {
-			arg_val := interpreter.Eval_expr(node_location, expr_ty.Args[arg_index], abs_mem)
+			arg_val := interpreter.Eval_expr(abs_state, expr_ty.Args[arg_index])
 			function_entry_varmem[arg_info.Name] = arg_val
 		}
+		if abs_state.remaining_call_depth == 0 {
+			write_warning(abs_state.node_location, fmt.Sprintf("Maximum function call depth(%d) reached. The call to %s will not be interpreted, but assumed to be ⊤.", interpreter.Settings.Max_call_stack_depth, expr_ty.Func_name))
+			switch func_info.Return_type.(type) {
+			case imp.IntType:
+				return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind}.Make_bot()
+			case imp.BoolType:
+				return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind}.Make_bot()
+			case imp.ArrayType:
+				return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: ArrayDomainKind}.Make_bot()
+			default:
+				return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: InvalidKind}
+			}
+		}
 		// return the call value
-		return interpreter.Interpret_function(func_info, function_entry_varmem)
+		return interpreter.Interpret_function(func_info, function_entry_varmem, abs_state.remaining_call_depth-1)
 
 	}
 	return AbstractValue[IntDomainImpl, ArrayDomainImpl]{}
@@ -225,7 +241,7 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) get_abstrac
 		if arr_val.domain_kind != ArrayDomainKind {
 			write_error(state.node_location, fmt.Sprintf("Tried to index a non-array value '%s'", expr_ty.Base))
 		}
-		index_val := interpreter.Eval_expr(state.node_location, expr_ty.Index, state.abstract_mem)
+		index_val := interpreter.Eval_expr(state, expr_ty.Index)
 		if index_val.domain_kind != ArrayDomainKind {
 			write_error(state.node_location, fmt.Sprintf("Index expression '%s' is not an integerdomain", expr_ty.Index))
 		}
@@ -246,7 +262,7 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) set_abstrac
 		}
 		state.abstract_mem[lhs_node.Name] = rhs_val
 	case *imp.ArrayIndexExpr:
-		index_val := interpreter.Eval_expr(state.node_location, lhs_node.Index, state.abstract_mem)
+		index_val := interpreter.Eval_expr(*state, lhs_node.Index)
 		if index_val.domain_kind != IntDomainKind {
 			write_error(state.node_location, "Only 1-dimensional arrays implemented")
 		}
@@ -285,7 +301,7 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) set_abstrac
 	}
 }
 
-func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_state AbstractState[IntDomainImpl, ArrayDomainImpl]) []AbstractState[IntDomainImpl, ArrayDomainImpl] {
+func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_state AbstractState[IntDomainImpl, ArrayDomainImpl], remaining_call_depth int) []AbstractState[IntDomainImpl, ArrayDomainImpl] {
 	cfg_node, cfg_node_exists := interpreter.Function_cfgs[in_state.node_location.Function_name].Node_map[in_state.node_location.Id]
 	if !cfg_node_exists {
 		write_error(create_empty_node_location(), fmt.Sprintf("The designated CFG Node %s doesn't exist", in_state.node_location))
@@ -323,7 +339,7 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_sta
 		switch stmt := cfg_node.Ast.(type) {
 		case *imp.AssignStmt:
 			// assignment should overwrite the value, instead of join
-			rhs_val := interpreter.Eval_expr(in_state.node_location, stmt.Rhs, in_state.abstract_mem)
+			rhs_val := interpreter.Eval_expr(in_state, stmt.Rhs)
 			interpreter.set_abstract_value_from_expr(stmt.Lhs, rhs_val, &in_state)
 
 		case *imp.SkipStmt:
@@ -335,7 +351,7 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_sta
 		case *imp.PrintStmt:
 			// eval subexprs and follow CFG edge
 			for _, val := range stmt.Args {
-				interpreter.Eval_expr(in_state.node_location, val, in_state.abstract_mem)
+				interpreter.Eval_expr(in_state, val)
 			}
 		// case *imp.ScanfStmt:
 		// 	// by default scanf initializes variables to top
@@ -347,9 +363,9 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_sta
 		// 	}
 		case *imp.CallStmt:
 			// the processing routine is the same as Eval_expr for CallExpr. But we just ignore the return result.
-			_ = interpreter.Eval_expr(in_state.node_location, &imp.CallExpr{Node: stmt.Node, Func_name: stmt.Func_name, Args: stmt.Args}, in_state.abstract_mem)
+			_ = interpreter.Eval_expr(in_state, &imp.CallExpr{Node: stmt.Node, Func_name: stmt.Func_name, Args: stmt.Args})
 		case *imp.ReturnStmt:
-			val := interpreter.Eval_expr(in_state.node_location, stmt.Arg, in_state.abstract_mem)
+			val := interpreter.Eval_expr(in_state, stmt.Arg)
 			joined_val, _ := interpreter.function_pre_mem_map[func_name].return_value.Join(val, in_state.node_location)
 			interpreter.function_pre_mem_map[func_name].return_value = joined_val
 		default:
@@ -364,7 +380,7 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_sta
 		// If at in_state the prop evaluates to either true or false,
 		// We can just execute only the corresponding branch.
 		// Otherwise filter for each branch and join the result
-		cond_val := interpreter.Eval_expr(in_state.node_location, cfg_node.Cond_expr, in_state.abstract_mem)
+		cond_val := interpreter.Eval_expr(in_state, cfg_node.Cond_expr)
 		// Try to represent it as SimpleProp
 		cond_simpleprop, simpleprop_success := algebra.Imp_expr_to_simple_prop(cfg_node.Cond_expr)
 		if !simpleprop_success {
@@ -381,7 +397,7 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_sta
 				true_filters := domain.Filter_true_query_simpleprop(cond_simpleprop)
 				// TODO: This doesn't refine array lengths
 				for _, filter := range true_filters {
-					rhs_dom_val := interpreter.Eval_expr(in_state.node_location, filter.Rhs_expr, in_state.abstract_mem)
+					rhs_dom_val := interpreter.Eval_expr(in_state, filter.Rhs_expr)
 					if rhs_dom_val.domain_kind == IntDomainKind {
 						updated_intdom := interpreter.get_abstract_value_from_lvalue_expr(filter.Term_expr, new_state).Get_int().Filter(filter.Query_type, rhs_dom_val.Get_int())
 						updated_val := AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind, int_domain: updated_intdom}
@@ -399,7 +415,7 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_sta
 				false_filters := domain.Filter_false_query_simpleprop(cond_simpleprop)
 				// TODO: This doesn't refine array lengths
 				for _, filter := range false_filters {
-					rhs_dom_val := interpreter.Eval_expr(in_state.node_location, filter.Rhs_expr, in_state.abstract_mem)
+					rhs_dom_val := interpreter.Eval_expr(in_state, filter.Rhs_expr)
 					if rhs_dom_val.domain_kind == IntDomainKind {
 						updated_intdom := interpreter.get_abstract_value_from_lvalue_expr(filter.Term_expr, new_state).Get_int().Filter(filter.Query_type, rhs_dom_val.Get_int())
 						updated_val := AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind, int_domain: updated_intdom}
@@ -435,20 +451,24 @@ func (analyzer *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Initialize() {
 	analyzer.function_pre_mem_map = make(map[imp.ImpFunctionName]*AbstractFunctionMem[IntDomainImpl, ArrayDomainImpl])
 }
 
+func (analyzer *AbstractAnalyzer[IntDom, ArrDom]) Run_analysis() {
+	analyzer.Interpret_function(analyzer.Function_defs["main"], nil, analyzer.Settings.Max_call_stack_depth)
+}
+
 // Perform abstract interpretation/analysis on the given function, setting the pre-node state of the entry node as initial_node_mem
 // Returns the abstract return value
-func (analyzer *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Interpret_function(function_def imp.ImpFunction, initial_node_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]) AbstractValue[IntDomainImpl, ArrayDomainImpl] {
+func (analyzer *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Interpret_function(function_def imp.ImpFunction, initial_node_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl], remaining_call_depth int) AbstractValue[IntDomainImpl, ArrayDomainImpl] {
 	function_name := function_def.Name
 	analyzer.function_pre_mem_map[function_name] = &AbstractFunctionMem[IntDomainImpl, ArrayDomainImpl]{}
 	analyzer.function_pre_mem_map[function_name].Initialize(function_def, analyzer.Function_cfgs[function_name], initial_node_mem)
 
-	initial_state := AbstractState[IntDomainImpl, ArrayDomainImpl]{node_location: analyzer.Function_cfgs[function_name].Entry_node, abstract_mem: make(AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl])}
+	initial_state := AbstractState[IntDomainImpl, ArrayDomainImpl]{node_location: analyzer.Function_cfgs[function_name].Entry_node, abstract_mem: make(AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]), remaining_call_depth: remaining_call_depth}
 	worklist := []AbstractState[IntDomainImpl, ArrayDomainImpl]{initial_state}
 	for len(worklist) > 0 {
 		front_val := worklist[0]
 		worklist = worklist[1:]
 		// fmt.Println("Process state", front_val)
-		for _, val := range analyzer.Step(front_val) {
+		for _, val := range analyzer.Step(front_val, remaining_call_depth) {
 			worklist = append(worklist, val)
 		}
 	}
@@ -458,14 +478,17 @@ func (analyzer *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Interpret_func
 
 func Test(func_cfg_map FunctionCFGMap, func_name imp.ImpFunctionName, func_info_map imp.ImpFunctionMap) {
 	g := AbstractAnalyzer[domain.IntervalDomain, ArraySummaryDomain[domain.IntervalDomain]]{
-		Function_cfgs:       func_cfg_map,
-		Function_defs:       func_info_map,
-		Settings:            AnalysisSettings{Loop_iters_before_widening: 5},
+		Function_cfgs: func_cfg_map,
+		Function_defs: func_info_map,
+		Settings: AnalysisSettings{
+			Loop_iters_before_widening: 5,
+			Max_call_stack_depth:       5,
+		},
 		Intdomain_default:   domain.IntervalDomain{},
 		Arraydomain_default: ArraySummaryDomain[domain.IntervalDomain]{},
 	}
 	g.Initialize()
-	g.Interpret_function(func_info_map["main"], nil)
+	g.Run_analysis()
 	fmt.Println("Finished. Final state:")
 	for key, val := range g.function_pre_mem_map {
 		fmt.Println("---------")
