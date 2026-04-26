@@ -193,12 +193,16 @@ func (func_mem AbstractFunctionMem[IntDomainImpl, ArrayDomainImpl]) String() str
 	return fmt.Sprintf("%s : %s, returns %s", func_mem.function_name, func_mem.pre_mem_node_map, func_mem.return_value)
 }
 
-func (func_mem *AbstractFunctionMem[IntDomainImpl, ArrayDomainImpl]) Initialize(function_name imp.ImpFunctionName, function_cfg *CFGGraph) {
+func (func_mem *AbstractFunctionMem[IntDomainImpl, ArrayDomainImpl]) Initialize(function_name imp.ImpFunctionName, function_cfg *CFGGraph, initial_node_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]) {
 	func_mem.pre_mem_node_map = make(AbstractNodeMemMap[IntDomainImpl, ArrayDomainImpl])
 	func_mem.n_visits = make(map[NodeID]int)
 	func_mem.function_name = function_name
 	for node_id := range function_cfg.Node_map {
-		func_mem.pre_mem_node_map[node_id] = make(AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl])
+		if node_id == function_cfg.Entry_node.Id {
+			func_mem.pre_mem_node_map[node_id] = initial_node_mem
+		} else {
+			func_mem.pre_mem_node_map[node_id] = make(AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl])
+		}
 	}
 	func_mem.return_value = AbstractValue[IntDomainImpl, ArrayDomainImpl]{}
 }

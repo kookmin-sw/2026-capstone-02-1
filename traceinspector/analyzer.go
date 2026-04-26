@@ -18,10 +18,10 @@ type AbstractAnalyzer[IntDom domain.IntegerDomain[IntDom], ArrDom ArrayDomain[In
 	function_pre_mem_map  map[imp.ImpFunctionName]*AbstractFunctionMem[IntDom, ArrDom] // map from function name to pre-states
 }
 
-func (analyzer *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Start_analysis(function_name imp.ImpFunctionName) {
+func (analyzer *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Interpret_function(function_name imp.ImpFunctionName, initial_node_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]) {
 	analyzer.function_pre_mem_map = make(map[imp.ImpFunctionName]*AbstractFunctionMem[IntDomainImpl, ArrayDomainImpl])
 	analyzer.function_pre_mem_map[function_name] = &AbstractFunctionMem[IntDomainImpl, ArrayDomainImpl]{}
-	analyzer.function_pre_mem_map[function_name].Initialize(function_name, analyzer.Function_cfgs[function_name])
+	analyzer.function_pre_mem_map[function_name].Initialize(function_name, analyzer.Function_cfgs[function_name], initial_node_mem)
 
 	semantics := analyzer.Create_semantics_func(analyzer.function_pre_mem_map[function_name], function_name)
 
@@ -52,7 +52,7 @@ func Test(func_cfg_map FunctionCFGMap, func_name imp.ImpFunctionName, func_info_
 		}
 	}
 	g := AbstractAnalyzer[domain.IntervalDomain, ArraySummaryDomain[domain.IntervalDomain]]{Function_cfgs: func_cfg_map, Function_defs: func_info_map, Create_semantics_func: create_sem}
-	g.Start_analysis("main")
+	g.Interpret_function("main", nil)
 	fmt.Println("Finished. Final state:")
 	for key, val := range g.function_pre_mem_map {
 		fmt.Println("---------")
