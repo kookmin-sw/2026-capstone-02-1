@@ -53,6 +53,18 @@ func (val AbstractValue[IntDomainImpl, ArrayDomainImpl]) Make_bot() AbstractValu
 	return val
 }
 
+func (val AbstractValue[IntDomainImpl, ArrayDomainImpl]) Make_top() AbstractValue[IntDomainImpl, ArrayDomainImpl] {
+	switch val.domain_kind {
+	case IntDomainKind:
+		val.int_domain = val.Get_int().CreateTop()
+	case BoolDomainKind:
+		val.bool_domain = val.Get_bool().CreateTop()
+	case ArrayDomainKind:
+		val.array_domain = val.Get_array().CreateTop()
+	}
+	return val
+}
+
 func (val AbstractValue[IntDomainImpl, ArrayDomainImpl]) Get_int() IntDomainImpl {
 	if val.domain_kind != IntDomainKind {
 		panic(fmt.Sprintf("Attempted to get non-intkind(%s) abstractvalue as int", val.domain_kind))

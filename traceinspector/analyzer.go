@@ -16,7 +16,7 @@ type AnalysisSettings struct {
 // An AbstractState is the pair (l, M^#) ↪ (l', M^#') used in the abstract transition relation
 // node_location: node location to be interpreted
 // abstract_mem: the input abstract memory state wrt the node should be interpreted
-// remaining_call_depth: the number of nested function calls allowed before widening to top
+// remaining_call_depth: the number of nested function calls allowed before widening to top. Negative number means no limit.
 type AbstractState[IntDomainImpl domain.IntegerDomain[IntDomainImpl], ArrayDomainImpl ArrayDomain[IntDomainImpl, ArrayDomainImpl]] struct {
 	node_location        CFGNodeLocation
 	abstract_mem         AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]
@@ -35,6 +35,7 @@ func (state AbstractState[IntDomainImpl, ArrayDomainImpl]) Clone() AbstractState
 	new_st := AbstractState[IntDomainImpl, ArrayDomainImpl]{}
 	new_st.node_location = state.node_location
 	new_st.abstract_mem = state.abstract_mem.Clone()
+	new_st.remaining_call_depth = state.remaining_call_depth
 	return new_st
 }
 
@@ -187,18 +188,21 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Eval_expr(a
 		}
 		function_entry_varmem := make(AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl])
 		for arg_index, arg_info := range func_info.Arg_pairs {
-			arg_val := interpreter.Eval_expr(abs_state, expr_ty.Args[arg_index])
+			// make sure nested function calls are checked against the limit
+			subexpr_state := abs_state.Clone()
+			subexpr_state.remaining_call_depth = abs_state.remaining_call_depth - 1
+			arg_val := interpreter.Eval_expr(subexpr_state, expr_ty.Args[arg_index])
 			function_entry_varmem[arg_info.Name] = arg_val
 		}
 		if abs_state.remaining_call_depth == 0 {
 			write_warning(abs_state.node_location, fmt.Sprintf("Maximum function call depth(%d) reached. The call to %s will not be interpreted, but assumed to be ⊤.", interpreter.Settings.Max_call_stack_depth, expr_ty.Func_name))
 			switch func_info.Return_type.(type) {
 			case imp.IntType:
-				return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind}.Make_bot()
+				return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind}.Make_top()
 			case imp.BoolType:
-				return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind}.Make_bot()
+				return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind}.Make_top()
 			case imp.ArrayType:
-				return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: ArrayDomainKind}.Make_bot()
+				return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: ArrayDomainKind}.Make_top()
 			default:
 				return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: InvalidKind}
 			}
@@ -301,7 +305,7 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) set_abstrac
 	}
 }
 
-func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_state AbstractState[IntDomainImpl, ArrayDomainImpl], remaining_call_depth int) []AbstractState[IntDomainImpl, ArrayDomainImpl] {
+func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_state AbstractState[IntDomainImpl, ArrayDomainImpl]) []AbstractState[IntDomainImpl, ArrayDomainImpl] {
 	cfg_node, cfg_node_exists := interpreter.Function_cfgs[in_state.node_location.Function_name].Node_map[in_state.node_location.Id]
 	if !cfg_node_exists {
 		write_error(create_empty_node_location(), fmt.Sprintf("The designated CFG Node %s doesn't exist", in_state.node_location))
@@ -405,7 +409,7 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_sta
 					}
 				}
 			}
-			return_states = append(return_states, AbstractState[IntDomainImpl, ArrayDomainImpl]{node_location: cond_edge.To_true_node_loc, abstract_mem: new_state.abstract_mem})
+			return_states = append(return_states, AbstractState[IntDomainImpl, ArrayDomainImpl]{node_location: cond_edge.To_true_node_loc, abstract_mem: new_state.abstract_mem, remaining_call_depth: in_state.remaining_call_depth})
 		}
 
 		if (cond_val.Get_bool().IsFalse() || cond_val.Get_bool().IsTop() || loop_widened) && cond_edge.To_false_node_loc.NodeExists() {
@@ -423,14 +427,14 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_sta
 					}
 				}
 			}
-			return_states = append(return_states, AbstractState[IntDomainImpl, ArrayDomainImpl]{node_location: cond_edge.To_false_node_loc, abstract_mem: new_state.abstract_mem})
+			return_states = append(return_states, AbstractState[IntDomainImpl, ArrayDomainImpl]{node_location: cond_edge.To_false_node_loc, abstract_mem: new_state.abstract_mem, remaining_call_depth: in_state.remaining_call_depth})
 		}
 	}
 
 	switch outgoing_edge := interpreter.Function_cfgs[func_name].Edge_map_from[in_state.node_location.Id].(type) {
 	case *CFGEdge:
 		new_state := in_state.Clone()
-		return_states = append(return_states, AbstractState[IntDomainImpl, ArrayDomainImpl]{node_location: outgoing_edge.To_node_loc, abstract_mem: new_state.abstract_mem})
+		return_states = append(return_states, AbstractState[IntDomainImpl, ArrayDomainImpl]{node_location: outgoing_edge.To_node_loc, abstract_mem: new_state.abstract_mem, remaining_call_depth: in_state.remaining_call_depth})
 	case *CFGCondEdge:
 		// handle condition edges within their respective stmt handling
 	}
@@ -468,7 +472,7 @@ func (analyzer *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Interpret_func
 		front_val := worklist[0]
 		worklist = worklist[1:]
 		// fmt.Println("Process state", front_val)
-		for _, val := range analyzer.Step(front_val, remaining_call_depth) {
+		for _, val := range analyzer.Step(front_val) {
 			worklist = append(worklist, val)
 		}
 	}
