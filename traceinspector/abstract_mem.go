@@ -62,6 +62,19 @@ func (val AbstractValue[IntDomainImpl, ArrayDomainImpl]) Get_array() ArrayDomain
 	return val.array_domain
 }
 
+func (val AbstractValue[IntDomainImpl, ArrayDomainImpl]) Join(other AbstractValue[IntDomainImpl, ArrayDomainImpl], node_loc CFGNodeLocation) (joined AbstractValue[IntDomainImpl, ArrayDomainImpl], changed bool) {
+	switch val.domain_kind {
+	case IntDomainKind:
+		joined.int_domain, changed = val.Get_int().Clone().Join(other.Get_int())
+	case BoolDomainKind:
+		joined.bool_domain, changed = val.Get_bool().Clone().Join(other.Get_bool())
+	case ArrayDomainKind:
+		joined.array_domain, changed = val.Get_array().Clone().Join(other.Get_array())
+	}
+	joined.domain_kind = val.domain_kind
+	return
+}
+
 func (val AbstractValue[IntDomainImpl, ArrayDomainImpl]) String() string {
 	switch val.domain_kind {
 	case InvalidKind:
@@ -106,34 +119,18 @@ func (node_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]) Clone() Abstra
 
 // Modify the values in node_mem inplace so that they are the result of joining with values in other_mem
 // Returns bool indicating whether the mem was changed
-func (node_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]) Join_inplace(other_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]) bool {
+func (node_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]) Join_inplace(other_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl], node_loc CFGNodeLocation) bool {
 	changed := false
 	for key, val := range other_mem {
 		original_val, original_exists := node_mem[key]
 		var joined AbstractValue[IntDomainImpl, ArrayDomainImpl]
 		if original_exists {
-			joined.domain_kind = original_val.domain_kind
 			indiv_changed := false
-			switch joined.domain_kind {
-			case IntDomainKind:
-				joined.int_domain, indiv_changed = original_val.Get_int().Clone().Join(val.Get_int())
-			case BoolDomainKind:
-				joined.bool_domain, indiv_changed = original_val.Get_bool().Clone().Join(val.Get_bool())
-			case ArrayDomainKind:
-				joined.array_domain, indiv_changed = original_val.Get_array().Clone().Join(val.Get_array())
-			}
+			joined, indiv_changed = original_val.Join(val, node_loc)
 			changed = changed || indiv_changed
 		} else {
 			changed = true
-			joined.domain_kind = val.domain_kind
-			switch joined.domain_kind {
-			case IntDomainKind:
-				joined.int_domain = val.Get_int()
-			case BoolDomainKind:
-				joined.bool_domain = val.Get_bool()
-			case ArrayDomainKind:
-				joined.array_domain = val.Get_array()
-			}
+			joined = val
 		}
 		node_mem[key] = joined
 	}
@@ -193,16 +190,25 @@ func (func_mem AbstractFunctionMem[IntDomainImpl, ArrayDomainImpl]) String() str
 	return fmt.Sprintf("%s : %s, returns %s", func_mem.function_name, func_mem.pre_mem_node_map, func_mem.return_value)
 }
 
-func (func_mem *AbstractFunctionMem[IntDomainImpl, ArrayDomainImpl]) Initialize(function_name imp.ImpFunctionName, function_cfg *CFGGraph, initial_node_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]) {
+func (func_mem *AbstractFunctionMem[IntDomainImpl, ArrayDomainImpl]) Initialize(function_def imp.ImpFunction, function_cfg *CFGGraph, initial_node_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]) {
 	func_mem.pre_mem_node_map = make(AbstractNodeMemMap[IntDomainImpl, ArrayDomainImpl])
 	func_mem.n_visits = make(map[NodeID]int)
-	func_mem.function_name = function_name
+	func_mem.function_name = imp.ImpFunctionName(function_def.Name)
 	for node_id := range function_cfg.Node_map {
-		if node_id == function_cfg.Entry_node.Id {
+		if node_id == function_cfg.Entry_node.Id && initial_node_mem != nil {
 			func_mem.pre_mem_node_map[node_id] = initial_node_mem
 		} else {
 			func_mem.pre_mem_node_map[node_id] = make(AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl])
 		}
 	}
-	func_mem.return_value = AbstractValue[IntDomainImpl, ArrayDomainImpl]{}
+	switch function_def.Return_type.(type) {
+	case imp.IntType:
+		func_mem.return_value = AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: IntDomainKind}
+	case imp.BoolType:
+		func_mem.return_value = AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind}
+	case imp.ArrayType:
+		func_mem.return_value = AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: ArrayDomainKind}
+	default:
+		func_mem.return_value = AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: InvalidKind}
+	}
 }

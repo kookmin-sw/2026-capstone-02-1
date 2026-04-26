@@ -161,8 +161,10 @@ func (arg ArgPair) String() string {
 	return fmt.Sprintf("%s %s", arg.Name, arg.Arg_type)
 }
 
+type ImpFunctionName string
+
 type ImpFunction struct {
-	Name        string
+	Name        ImpFunctionName
 	Arg_pairs   []ArgPair
 	Body        []Stmt
 	Return_type ImpTypes

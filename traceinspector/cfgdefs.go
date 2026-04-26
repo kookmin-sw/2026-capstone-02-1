@@ -174,6 +174,7 @@ func (m CFGGraph) To_mermaid() string {
 	}
 	repr := CFGGraphRepr{}
 	out := strings.Builder{}
+	out.WriteString("flowchart TD\n")
 	for _, v := range m.Node_map {
 		repr.Nodes = append(repr.Nodes, v)
 	}

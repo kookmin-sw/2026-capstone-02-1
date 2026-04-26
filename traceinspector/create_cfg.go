@@ -216,7 +216,6 @@ func Print_cfg_map_json(cfgs FunctionCFGMap) {
 
 func Print_mermaid(cfg *CFGGraph) {
 	// fmt.Println("```")
-	fmt.Println("flowchart TD")
 	fmt.Println(cfg.To_mermaid())
 	// fmt.Println("```")
 }

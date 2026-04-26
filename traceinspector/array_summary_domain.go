@@ -79,6 +79,11 @@ func (arr ArraySummaryDomain[IntDomainImpl]) Len() IntDomainImpl {
 	return arr.length
 }
 
+func (arr ArraySummaryDomain[IntDomainImpl]) SetLen(val IntDomainImpl) ArraySummaryDomain[IntDomainImpl] {
+	arr.length = val
+	return arr
+}
+
 func (arr ArraySummaryDomain[IntDomainImpl]) CreateTop() ArraySummaryDomain[IntDomainImpl] {
 	return ArraySummaryDomain[IntDomainImpl]{val: arr.length.CreateTop(), length: arr.length.CreateTop(), is_top: true}
 }

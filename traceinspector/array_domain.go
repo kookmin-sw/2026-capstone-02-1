@@ -10,5 +10,6 @@ type ArrayDomain[IntDomainImpl domain.IntegerDomain[IntDomainImpl], ArrayDomainI
 	GetIndex(IntDomainImpl) AbstractValue[IntDomainImpl, ArrayDomainImpl]
 	SetVal(IntDomainImpl, AbstractValue[IntDomainImpl, ArrayDomainImpl]) ArrayDomainImpl
 	Len() IntDomainImpl
+	SetLen(IntDomainImpl) ArrayDomainImpl
 	Make_array(IntDomainImpl, AbstractValue[IntDomainImpl, ArrayDomainImpl]) ArrayDomainImpl
 }

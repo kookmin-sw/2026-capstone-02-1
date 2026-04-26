@@ -172,6 +172,24 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Eval_expr(n
 		}
 		result_val := lhs_val.Get_int().Greaterthan(rhs_val.Get_int())
 		return AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: BoolDomainKind, bool_domain: result_val}
+	case *imp.CallExpr:
+		func_info, func_exists := interpreter.Function_defs[expr_ty.Func_name]
+		if !(func_exists) {
+			write_error(node_location, fmt.Sprintf("Function %s does not exist", expr_ty.Func_name))
+			panic("unreachable")
+		}
+		if len(func_info.Arg_pairs) != len(expr_ty.Args) {
+			write_error(node_location, fmt.Sprintf("Function %s expectes %d arguments, but got %d", expr_ty.Func_name, len(func_info.Arg_pairs), len(expr_ty.Args)))
+			panic("unreachable")
+		}
+		function_entry_varmem := make(AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl])
+		for arg_index, arg_info := range func_info.Arg_pairs {
+			arg_val := interpreter.Eval_expr(node_location, expr_ty.Args[arg_index], abs_mem)
+			function_entry_varmem[arg_info.Name] = arg_val
+		}
+		// return the call value
+		return interpreter.Interpret_function(func_info, function_entry_varmem)
+
 	}
 	return AbstractValue[IntDomainImpl, ArrayDomainImpl]{}
 }
@@ -249,8 +267,21 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) set_abstrac
 			write_warning(state.node_location, fmt.Sprintf("Potentially unsafe array indexing: index has value %s, but %s.Len has value %s.", index_val.Get_int(), arr_varname, lhs_val.Get_array().Len()))
 		}
 		state.abstract_mem[arr_varname] = AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: ArrayDomainKind, array_domain: lhs_val.Get_array().SetVal(index_val.Get_int(), rhs_val)}
+	case *imp.LenExpr:
+		arr_varname := get_varname_from_lvalue(lhs_node.Subexpr)
+		lhs_val, lhs_exists := state.abstract_mem[arr_varname]
+		if !lhs_exists {
+			write_error(state.node_location, fmt.Sprintf("Attempting to get length of nonexisting variable '%s'", arr_varname))
+		}
+		if lhs_val.domain_kind != ArrayDomainKind {
+			write_error(state.node_location, fmt.Sprintf("Attempting to get length of non-array variable '%s'", arr_varname))
+		}
+		if rhs_val.domain_kind != IntDomainKind {
+			write_error(state.node_location, fmt.Sprintf("subexpr of len is not an IntDomainKind, but %s", rhs_val.domain_kind))
+		}
+		state.abstract_mem[arr_varname] = AbstractValue[IntDomainImpl, ArrayDomainImpl]{domain_kind: ArrayDomainKind, array_domain: lhs_val.Get_array().SetLen(rhs_val.Get_int())}
 	default:
-		write_error(state.node_location, fmt.Sprintf("Unsupported LHS expr '%s' with type %T", lhs, lhs))
+		write_error(state.node_location, fmt.Sprintf("set_abstract_value_from_expr: Unsupported LHS expr '%s' with type %T", lhs, lhs))
 	}
 }
 
@@ -273,7 +304,7 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_sta
 		loop_widened = true
 	} else {
 		// When we receive a new pair, update the global state with its join
-		state_changed := global_state.Join_inplace(in_state.abstract_mem)
+		state_changed := global_state.Join_inplace(in_state.abstract_mem, in_state.node_location)
 		if !state_changed && interpreter.function_pre_mem_map[func_name].n_visits[in_state.node_location.Id] > 0 {
 			// no updates to the state
 			write_info(in_state.node_location, "No updates to node state")
@@ -311,7 +342,13 @@ func (interpreter *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Step(in_sta
 		// 			// integer type
 		// 		}
 		// 	}
-
+		case *imp.CallStmt:
+			// the processing routine is the same as Eval_expr for CallExpr. But we just ignore the return result.
+			_ = interpreter.Eval_expr(in_state.node_location, &imp.CallExpr{Node: stmt.Node, Func_name: stmt.Func_name, Args: stmt.Args}, in_state.abstract_mem)
+		case *imp.ReturnStmt:
+			val := interpreter.Eval_expr(in_state.node_location, stmt.Arg, in_state.abstract_mem)
+			joined_val, _ := interpreter.function_pre_mem_map[func_name].return_value.Join(val, in_state.node_location)
+			interpreter.function_pre_mem_map[func_name].return_value = joined_val
 		default:
 			panic(fmt.Sprintf("unimplemented stmt %T", stmt))
 		}
@@ -391,10 +428,13 @@ type AbstractAnalyzer[IntDom domain.IntegerDomain[IntDom], ArrDom ArrayDomain[In
 	function_pre_mem_map map[imp.ImpFunctionName]*AbstractFunctionMem[IntDom, ArrDom] // map from function name to pre-states
 }
 
-func (analyzer *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Interpret_function(function_name imp.ImpFunctionName, initial_node_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]) {
+// Perform abstract interpretation/analysis on the given function, setting the pre-node state of the entry node as initial_node_mem
+// Returns the abstract return value
+func (analyzer *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Interpret_function(function_def imp.ImpFunction, initial_node_mem AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl]) AbstractValue[IntDomainImpl, ArrayDomainImpl] {
 	analyzer.function_pre_mem_map = make(map[imp.ImpFunctionName]*AbstractFunctionMem[IntDomainImpl, ArrayDomainImpl])
+	function_name := function_def.Name
 	analyzer.function_pre_mem_map[function_name] = &AbstractFunctionMem[IntDomainImpl, ArrayDomainImpl]{}
-	analyzer.function_pre_mem_map[function_name].Initialize(function_name, analyzer.Function_cfgs[function_name], initial_node_mem)
+	analyzer.function_pre_mem_map[function_name].Initialize(function_def, analyzer.Function_cfgs[function_name], initial_node_mem)
 
 	initial_state := AbstractState[IntDomainImpl, ArrayDomainImpl]{node_location: analyzer.Function_cfgs[function_name].Entry_node, abstract_mem: make(AbstractVarMemMap[IntDomainImpl, ArrayDomainImpl])}
 	worklist := []AbstractState[IntDomainImpl, ArrayDomainImpl]{initial_state}
@@ -406,6 +446,7 @@ func (analyzer *AbstractAnalyzer[IntDomainImpl, ArrayDomainImpl]) Interpret_func
 			worklist = append(worklist, val)
 		}
 	}
+	return analyzer.function_pre_mem_map[function_name].return_value
 	// fmt.Println("Final mem", analyzer.function_pre_mem_map[function_name])
 }
 
@@ -417,7 +458,7 @@ func Test(func_cfg_map FunctionCFGMap, func_name imp.ImpFunctionName, func_info_
 		Intdomain_default:   domain.IntervalDomain{},
 		Arraydomain_default: ArraySummaryDomain[domain.IntervalDomain]{},
 	}
-	g.Interpret_function("main", nil)
+	g.Interpret_function(func_info_map["main"], nil)
 	fmt.Println("Finished. Final state:")
 	for key, val := range g.function_pre_mem_map {
 		fmt.Println("---------")
@@ -425,5 +466,26 @@ func Test(func_cfg_map FunctionCFGMap, func_name imp.ImpFunctionName, func_info_
 		for nid, nval := range val.pre_mem_node_map {
 			fmt.Println(nid, ":", nval)
 		}
+	}
+
+	// modify the cfg so we print mermaid with global state
+	for fun_name, val := range g.function_pre_mem_map {
+		fmt.Println("---------")
+		fmt.Println(fun_name)
+		updated_nodes := make(map[NodeID]CFGNodeClass)
+		for node_id, node_state := range val.pre_mem_node_map {
+			fmt.Println(node_id)
+			switch node := func_cfg_map[fun_name].Node_map[node_id].(type) {
+			case *CFGNode:
+				updated_nodes[node_id] = &CFGNode{Id: node.Id, Code: node_state.String() + "\n" + node.Code, Node_type: node.Node_type}
+			case *CFGCondNode:
+				updated_nodes[node_id] = &CFGCondNode{Id: node.Id, Code: node_state.String() + "\n" + node.Code, Node_type: node.Node_type}
+			}
+			fmt.Println(updated_nodes[node_id])
+		}
+		func_cfg_map[fun_name].Node_map = updated_nodes
+		fmt.Println("```")
+		fmt.Println(func_cfg_map[fun_name].To_mermaid())
+		fmt.Println("```")
 	}
 }

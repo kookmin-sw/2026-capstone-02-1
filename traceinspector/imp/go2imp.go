@@ -19,8 +19,6 @@ func nodeString(n ast.Node) string {
 	return buf.String()
 }
 
-type ImpFunctionName string
-
 type ImpFunctionMap map[ImpFunctionName]ImpFunction
 
 type Go2ImpTranslator struct {
@@ -377,7 +375,7 @@ func Translate_ast_file_to_imp(go_input_file *ast.File, fset *token.FileSet) Imp
 				}
 				return_type = translator.translate_ast_node_as_ImpType(func_decl.Type.Results.List[0].Type)
 			}
-			output[ImpFunctionName(func_decl.Name.Name)] = ImpFunction{Name: func_decl.Name.Name, Arg_pairs: func_argpairs, Body: translator.Translate_Stmt(func_decl.Body), Return_type: return_type}
+			output[ImpFunctionName(func_decl.Name.Name)] = ImpFunction{Name: ImpFunctionName(func_decl.Name.Name), Arg_pairs: func_argpairs, Body: translator.Translate_Stmt(func_decl.Body), Return_type: return_type}
 		}
 	}
 	return output
