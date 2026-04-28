@@ -32,7 +32,11 @@ function App() {
 
     // Initialize mermaid functionality
     useEffect(() => {
-        mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: "dark" });
+        mermaid.initialize({
+            startOnLoad: false, securityLevel: 'strict', theme: "base", themeVariables: {
+                primaryColor: '#2e3440', primaryTextColor: '#8fbcbb', primaryBorderColor: '#cbd5e1', lineColor: '#cbd5e1', secondaryColor: '#4c566a', tertiaryColor: '#cbd5e1'
+            }
+        });
     }, []);
 
     // Render flowchart for the active tab
