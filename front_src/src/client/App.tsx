@@ -33,7 +33,7 @@ function App() {
     // Initialize mermaid functionality
     useEffect(() => {
         mermaid.initialize({
-            startOnLoad: false, securityLevel: 'strict', theme: "base", themeVariables: {
+            startOnLoad: false, securityLevel: 'strict', markdownAutoWrap: false, theme: "base", themeVariables: {
                 primaryColor: '#2e3440', primaryTextColor: '#8fbcbb', primaryBorderColor: '#cbd5e1', lineColor: '#cbd5e1', secondaryColor: '#4c566a', tertiaryColor: '#cbd5e1'
             }
         });
@@ -181,8 +181,8 @@ function App() {
         }
     };
 
-    // Run inspector and print
-    const handleRunInspection = async () => {
+    // Run inspector and print mermaids
+    const handlePrintMermaids = async () => {
         if (!fileRef.current) {
             alert("No file selected!");
             return;
@@ -218,6 +218,8 @@ function App() {
             let outMermaid: string = "";
             let outMermaids: Array<string> = [];
 
+            tabNames.current = [];
+
             // Convert JSON to mermaidJS
             for (const outFuncsName in output) {
                 const outFuncs = output[outFuncsName];
@@ -226,69 +228,94 @@ function App() {
 
                 outMermaid += `flowchart TB\n`;
 
-                // Clone and sort outNodes
-                const outNodes = [...outFuncs.Nodes].sort((a, b) => {
-                    const ai = Number(a.Id);
-                    const bi = Number(b.Id);
+                if (outFuncs.Nodes) {
+                    // Clone and sort outNodes
+                    const outNodes = [...outFuncs.Nodes].sort((a, b) => {
+                        const ai = Number(a.Id);
+                        const bi = Number(b.Id);
 
-                    if (Number.isNaN(ai) || Number.isNaN(bi))
-                        return String(a.Id).localeCompare(String(b.Id));
+                        if (Number.isNaN(ai) || Number.isNaN(bi))
+                            return String(a.Id).localeCompare(String(b.Id));
 
-                    return ai - bi;
-                });
+                        return ai - bi;
+                    });
 
-                // Clone and sort outEdges
-                const outEdges = [...outFuncs.Edges].sort((a, b) => {
-                    const ai = Number(a.Id);
-                    const bi = Number(b.Id);
+                    // Convert outNodes to mermaidJS
+                    for (let i = 0; i < outNodes.length; i++) {
+                        const outNodeID = outNodes[i].Id;
+                        const outNodeCode = outNodes[i].Code;
+                        const outSafeCode = outNodeCode.replaceAll("`", "#96;").replaceAll("\"", "#34;");
+                        const outNodeType = outNodes[i].Node_type;
 
-                    if (Number.isNaN(ai) || Number.isNaN(bi))
-                        return String(a.Id).localeCompare(String(b.Id));
+                        outMermaid += `    id${outNodeID}`
 
-                    return ai - bi;
-                });
+                        if (outNodeType === "basic") {
+                            outMermaid += `[\"\`${outSafeCode}\`\"]`;
+                        }
+                        else if (outNodeType === "cond") {
+                            outMermaid += `{\"\`${outSafeCode}\`\"}`;
+                        }
 
-                // Convert outNodes to mermaidJS
-                for (let i = 0; i < outNodes.length; i++) {
-                    const outNodeID = outNodes[i].Id;
-                    const outNodeCode = outNodes[i].Code;
-                    const outSafeCode = outNodeCode.replaceAll("`", "#96;").replaceAll("\"", "#34;");
-                    const outNodeType = outNodes[i].Node_type;
-
-                    outMermaid += `    id${outNodeID}`
-
-                    if (outNodeType === "basic") {
-                        outMermaid += `[\"\`${outSafeCode}\`\"]`;
+                        outMermaid += `\n`;
                     }
-                    else if (outNodeType === "cond") {
-                        outMermaid += `{\"\`${outSafeCode}\`\"}`;
-                    }
-
-                    outMermaid += `\n`;
                 }
 
-                // Convert outEdges to mermaidJS
-                for (let i = 0; i < outEdges.length; i++) {
-                    const outEdgeCond = outEdges[i].Label;
-                    const outEdgeFrom = outEdges[i].From_node_loc;
-                    const outEdgeDest = outEdges[i].To_node_loc;
+                if (outFuncs.Edges) {
+                    // Clone and sort outEdges
+                    const outEdges = [...outFuncs.Edges].sort((a, b) => {
+                        const ai = Number(a.Id);
+                        const bi = Number(b.Id);
 
-                    outMermaid += `    id${outEdgeFrom} `;
-                    outMermaid += outEdgeCond !== "" ? `-- ${outEdgeCond} --> ` : `--> `;
-                    outMermaid += `id${outEdgeDest}\n`;
+                        if (Number.isNaN(ai) || Number.isNaN(bi))
+                            return String(a.Id).localeCompare(String(b.Id));
+
+                        return ai - bi;
+                    });
+
+                    // Convert outEdges to mermaidJS
+                    for (let i = 0; i < outEdges.length; i++) {
+                        const outEdgeCond = outEdges[i].Label;
+                        const outEdgeFrom = outEdges[i].From_node_loc;
+                        const outEdgeDest = outEdges[i].To_node_loc;
+
+                        outMermaid += `    id${outEdgeFrom} `;
+                        outMermaid += outEdgeCond !== "" ? `-- ${outEdgeCond} --> ` : `--> `;
+                        outMermaid += `id${outEdgeDest}\n`;
+                    }
                 }
 
                 outMermaids.push(outMermaid);
                 outMermaid = "";
             }
 
-            console.log(outMermaids);
-
             // Set mermaids to globally
             setMermaids(outMermaids);
 
             // Set default tab
             setActiveTab(outMermaids.length ? 0 : -1);
+
+        } catch (_err) {
+            console.error(`Inspection error!\n`);
+            alert(`Inspection error!\n`);
+        }
+    };
+
+    // Run inspector and print
+    const handleRunInspection = async () => {
+        if (!fileRef.current) {
+            alert("No file selected!");
+            return;
+        }
+
+        try {
+            // Upload file to server
+            handleFileUpload();
+
+            // Run inspector and print mermaids
+            handlePrintMermaids();
+
+            // Run inspector again and print debug
+            // handlePrintDebug();
             
         } catch (_err) {
             console.error(`Inspection error!\n`);
@@ -305,10 +332,9 @@ function App() {
                 <div className="headBoxes" id="headButtonBox">
                     <button onClick={handleFileClick} className="headButtons" id="openButton">Open</button>
                     <input id="fileInput" type="file" accept=".go" onChange={handleFileChange} style={{ display: "none" }} />
-                    <button className="headButtons" id="uploadButton" onClick={handleFileUpload}>Upload</button>
                     <button className="headButtons" id="runButton" onClick={handleRunInspection}>Run</button>
                 </div>
-                <br /><br /><br /><br /><br /><br /><hr /><br />
+                <br /><br /><br /><br /><hr /><br />
             </header>
             <main>
                 <div ref={codeEditorRef} className="mainBoxes" id="codeBox"></div>
@@ -328,7 +354,7 @@ function App() {
                 <div ref={outputEditorRef} className="mainBoxes" id="logBox"></div>
             </main>
             <footer>
-                <div id="copyright">&copy; {new Date().getFullYear()} Copyright Reserved</div>
+                <div id="placeholder"></div>
             </footer>
         </>
     )
