@@ -16,11 +16,13 @@ func main() {
 	cfg_mermaid_argname := "print-cfg-mermaid"
 	print_imp_argname := "print-imp"
 	interpret_imp_argname := "interpret-imp"
+	debug_mode_argname := "debug"
 
 	_ = flag.Bool(cfg_json_argname, false, "whether to just print cfg and exit")
 	_ = flag.Bool(cfg_mermaid_argname, false, "whether to just print the mermaid graph and exit")
 	_ = flag.Bool(print_imp_argname, false, "whether to just print the translated Imp code and exit")
 	_ = flag.Bool(interpret_imp_argname, false, "whether to just interpret the translated Imp code and exit")
+	_ = flag.Bool(debug_mode_argname, false, "whether to print debug outputs")
 	flag.Parse()
 	if *input_path == "" {
 		panic("need to pass input go file path with --gofile")
@@ -30,6 +32,7 @@ func main() {
 	just_print_imp := false
 	just_print_mermaid := false
 	just_interpret := false
+	debug := false
 	flag.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case cfg_json_argname:
@@ -40,6 +43,8 @@ func main() {
 			just_print_imp = true
 		case interpret_imp_argname:
 			just_interpret = true
+		case debug_mode_argname:
+			debug = true
 		}
 	})
 
@@ -81,5 +86,5 @@ func main() {
 		interpreter.Interpret_main()
 		return
 	}
-	traceinspector.Test(cfg_map, "main", imp_functions)
+	traceinspector.Test(cfg_map, "main", imp_functions, debug)
 }
